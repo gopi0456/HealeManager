@@ -1,0 +1,8 @@
+{
+  "appId": "com.ska.healeapp",
+  "appName": "HealeManager",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

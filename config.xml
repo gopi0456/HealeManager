@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.ska.healeapp" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>HealeManager</name>
+    <description>Healer Patient Manager Application</description>
+    <author email="dev@cordova.apache.org" href="https://cordova.apache.org">
+        Apache Cordova Team
+    </author>
+    <content src="index.html" />
+    
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+    
+    <!-- Allow blob and data URIs for PDF generation and Web Share API -->
+    <allow-navigation href="blob:*" />
+    <allow-navigation href="data:*" />
+
+    <platform name="android">
+        <!-- App Icons -->
+        <icon src="res/mipmap-mdpi/ic_launcher.png" density="mdpi" />
+        <icon src="res/mipmap-hdpi/ic_launcher.png" density="hdpi" />
+        <icon src="res/mipmap-xhdpi/ic_launcher.png" density="xhdpi" />
+        <icon src="res/mipmap-xxhdpi/ic_launcher.png" density="xxhdpi" />
+        <icon src="res/mipmap-xxxhdpi/ic_launcher.png" density="xxxhdpi" />
+        
+        <!-- Permissions for File Access and Sharing -->
+        <edit-config file="AndroidManifest.xml" mode="merge" target="/manifest">
+            <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+                <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+                <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+                <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+            </manifest>
+        </edit-config>
+
+        <!-- Allow insecure file mode for Cordova File Plugin -->
+        <preference name="AndroidInsecureFileModeEnabled" value="true" />
+    </platform>
+</widget>

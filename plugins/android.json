@@ -1,0 +1,31 @@
+{
+  "prepare_queue": {
+    "installed": [],
+    "uninstalled": []
+  },
+  "config_munge": {
+    "files": {}
+  },
+  "installed_plugins": {
+    "cordova-sqlite-storage": {
+      "PACKAGE_NAME": "com.ska.healiapp"
+    },
+    "cordova-plugin-file": {
+      "ANDROIDX_WEBKIT_VERSION": "1.4.0",
+      "PACKAGE_NAME": "com.ska.healiapp"
+    },
+    "cordova-sms-plugin": {
+      "PACKAGE_NAME": "com.ska.healiapp"
+    },
+    "cordova.plugin.printer": {
+      "PACKAGE_NAME": "com.ska.healiapp"
+    },
+    "cordova-plugin-inappbrowser": {
+      "PACKAGE_NAME": "com.ska.healiapp"
+    },
+    "cordova-plugin-file-opener2": {
+      "PACKAGE_NAME": "com.ska.healiapp"
+    }
+  },
+  "dependent_plugins": {}
+}
