@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>HealeManager</title>
+    <title>CLAKSHMI ACUPUNCTURE</title>
     <link rel="stylesheet" href="css/styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -11,24 +11,16 @@
     <button id="themeFab" class="theme-fab" onclick="toggleTheme()">🌙</button>
     <button id="logoutBtn" class="logout-fab" onclick="logout()">⏻</button>
 
-    <!-- Login Page -->
     <div id="loginPage" class="login-container">
         <div class="login-box">
-            <h1><img src="img/app_icon.png" style="width:32px;height:32px;vertical-align:middle;border-radius:8px;margin-right:10px;">HealeManager</h1>
-            <div class="input-with-icon">
-                <span class="input-icon">🆔</span>
-                <input type="text" id="username" placeholder="Username">
-            </div>
-            <div class="input-with-icon">
-                <span class="input-icon">🔐</span>
-                <input type="password" id="password" placeholder="Password">
-            </div>
+            <h1><img src="img/app_icon.png" style="width:32px;height:32px;vertical-align:middle;border-radius:8px;margin-right:10px;">CLAKSHMI ACUPUNCTURE</h1>
+            <div class="input-with-icon"><span class="input-icon">🆔</span><input type="text" id="username" placeholder="Username"></div>
+            <div class="input-with-icon"><span class="input-icon">🔐</span><input type="password" id="password" placeholder="Password"></div>
             <div id="loginError" class="error-msg"></div>
             <button onclick="login()">Login</button>
         </div>
     </div>
 
-    <!-- Dashboard Page -->
     <div id="dashboardPage" class="dashboard-container" style="display:none;">
         <h1><img src="img/app_icon.png" style="width:32px;height:32px;vertical-align:middle;border-radius:8px;margin-right:10px;">Dashboard</h1>
         <p class="dashboard-welcome">Welcome, Admin! Here's your clinic overview.</p>
@@ -43,34 +35,18 @@
         <button class="dashboard-menu-btn" onclick="showPage('menuPage')">📂 Go to Menu →</button>
     </div>
 
-    <!-- Menu Page -->
     <div id="menuPage" class="menu-container" style="display:none;">
-        <div class="menu-header">
-            <button class="menu-back-btn" onclick="showPage('dashboardPage')">← Dashboard</button>
-        </div>
+        <div class="menu-header"><button class="menu-back-btn" onclick="showPage('dashboardPage')">← Dashboard</button></div>
         <h1>Main Menu</h1>
         <div class="menu-grid">
-            <div class="menu-btn" onclick="showPage('heliRecordPage')">
-                <div class="icon">📋</div>
-                <h2>Heale Record</h2>
-            </div>
-            <div class="menu-btn" onclick="showPage('addPage')">
-                <img src="img/app_icon.png" style="width:40px;height:40px;border-radius:8px;margin-bottom:8px;">
-                <h2>New Registration</h2>
-            </div>
-            <div class="menu-btn" onclick="showPage('todayTokenPage')">
-                <div class="icon">🎟️</div>
-                <h2>Today Token</h2>
-            </div>
-            <div class="menu-btn" onclick="showPage('reminderPage')">
-                <div class="icon">🔔</div>
-                <h2>Reminder</h2>
-            </div>
+            <div class="menu-btn" onclick="showPage('heliRecordPage')"><div class="icon">📋</div><h2>Heale Record</h2></div>
+            <div class="menu-btn" onclick="showPage('addPage')"><img src="img/app_icon.png" style="width:40px;height:40px;border-radius:8px;margin-bottom:8px;"><h2>New Registration</h2></div>
+            <div class="menu-btn" onclick="showPage('todayTokenPage')"><div class="icon">🎟️</div><h2>Today Token</h2></div>
+            <div class="menu-btn" onclick="showPage('reminderPage')"><div class="icon">🔔</div><h2>Reminder</h2></div>
         </div>
     </div>
 
-    <!-- Heale Record Page -->
-    <div id="heliRecordPage" class="page">
+    <div id="heliRecordPage" class="page" style="display:none;">
         <button class="back-btn" onclick="showPage('menuPage')">← Back to Menu</button>
         <h1><img src="img/app_icon.png" style="width:32px;height:32px;vertical-align:middle;border-radius:8px;margin-right:10px;">Heale Record</h1>
         <div class="data-buttons">
@@ -78,47 +54,24 @@
             <button class="btn-import" onclick="showImportModal()">📥 Import</button>
         </div>
         <div class="search-box">
-            <div class="input-with-icon">
-                <span class="input-icon">🔎</span>
-                <input type="text" id="searchInput" placeholder="Enter name or Aadhar number to search patients" oninput="searchPatients()">
-            </div>
+            <div class="input-with-icon"><span class="input-icon">🔎</span><input type="text" id="searchInput" placeholder="Enter name or Aadhar number" oninput="searchPatients()"></div>
         </div>
         <div id="patientList"></div>
     </div>
 
-    <!-- Add Patient Page -->
-    <div id="addPage" class="page">
+    <div id="addPage" class="page" style="display:none;">
         <button class="back-btn" onclick="showPage('menuPage')">← Back to Menu</button>
         <h1><img src="img/app_icon.png" style="width:32px;height:32px;vertical-align:middle;border-radius:8px;margin-right:10px;">New Registration</h1>
-        <div class="input-with-icon">
-            <span class="input-icon">🧑</span>
-            <input type="text" id="name" placeholder="Patient Name *">
-        </div>
-        <div class="input-with-icon">
-            <span class="input-icon">📅</span>
-            <input type="number" id="age" placeholder="Age">
-        </div>
-        <div class="input-with-icon">
-            <span class="input-icon">📞</span>
-            <input type="tel" id="phone" placeholder="Phone Number (10 digits) *" maxlength="10">
-        </div>
-        <div class="input-with-icon">
-            <span class="input-icon">🪪</span>
-            <input type="number" id="aadhar" placeholder="Aadhar Last 5 Digits *" maxlength="5" oninput="if(this.value.length > 5) this.value = this.value.slice(0, 5);">
-        </div>
-        <div class="input-with-icon">
-            <span class="input-icon">📍</span>
-            <input type="text" id="address" placeholder="Address">
-        </div>
-        <div class="input-with-icon">
-            <span class="input-icon">📋</span>
-            <textarea id="notes" placeholder="Medical Notes" rows="3"></textarea>
-        </div>
+        <div class="input-with-icon"><span class="input-icon">🧑</span><input type="text" id="name" placeholder="Patient Name *"></div>
+        <div class="input-with-icon"><span class="input-icon">📅</span><input type="number" id="age" placeholder="Age"></div>
+        <div class="input-with-icon"><span class="input-icon">📞</span><input type="tel" id="phone" placeholder="Phone Number (10 digits) *" maxlength="10"></div>
+        <div class="input-with-icon"><span class="input-icon">🪪</span><input type="number" id="aadhar" placeholder="Aadhar Last 5 Digits *" maxlength="5" oninput="if(this.value.length > 5) this.value = this.value.slice(0, 5);"></div>
+        <div class="input-with-icon"><span class="input-icon">📍</span><input type="text" id="address" placeholder="Address"></div>
+        <div class="input-with-icon"><span class="input-icon">📋</span><textarea id="notes" placeholder="Medical Notes" rows="3"></textarea></div>
         <button class="main-btn" onclick="addPatient()">Save Registration</button>
     </div>
 
-    <!-- Today Token Page -->
-    <div id="todayTokenPage" class="page">
+    <div id="todayTokenPage" class="page" style="display:none;">
         <button class="back-btn" onclick="showPage('menuPage')">← Back to Menu</button>
         <h1>🎟️ Today Token</h1>
         <div class="token-header">
@@ -129,66 +82,36 @@
         <div id="tokenList"></div>
     </div>
 
-    <!-- Reminder Page -->
-    <div id="reminderPage" class="page">
+    <div id="reminderPage" class="page" style="display:none;">
         <button class="back-btn" onclick="showPage('menuPage')">← Back to Menu</button>
         <h1>🔔 Follow-up Reminder</h1>
         <p style="text-align:center;color:var(--text-secondary);">Reminders for the same day next week</p>
         <div id="reminderList"></div>
     </div>
 
-    <!-- Token Visit Page -->
-    <div id="tokenVisitPage" class="page">
+    <div id="tokenVisitPage" class="page" style="display:none;">
+        <button class="back-btn" onclick="showPage('todayTokenPage')" style="margin-bottom:15px;">← Back to Tokens</button>
         <div id="tokenVisitContent"></div>
     </div>
 
-    <!-- Modals -->
     <div id="successModal" class="modal">
         <div class="modal-box">
             <h2>✅ Registration Saved!</h2>
             <p id="modalMessage"></p>
             <div class="modal-buttons">
-                <button class="btn-whatsapp" onclick="sendWhatsApp()">💬 WhatsApp (Free)</button>
+                <button class="btn-whatsapp" onclick="sendWhatsApp()">💬 WhatsApp</button>
                 <button class="btn-sms" onclick="sendSMS()">📱 SMS</button>
                 <button class="btn-skip" onclick="closeModal()">Skip</button>
             </div>
         </div>
     </div>
 
-    <div id="tokenTicketModal" class="modal">
-        <div class="modal-box">
-            <h2><img src="img/app_icon.png" class="modal-logo">Heale Clinic</h2>
-            <div class="ticket-content">
-                <div id="ticketTokenNum" style="font-size:32px;font-weight:bold;">#1</div>
-                <div style="font-size:16px;font-weight:bold;">Heale Clinic</div>
-                <div style="font-size:11px;">Heale Token Ticket</div>
-                <hr style="border:1px dashed #000;margin:10px 0;">
-                <div>Name: <span id="ticketName">-</span></div>
-                <div>Heale ID: <span id="ticketId">-</span></div>
-                <div>Phone: <span id="ticketPhone">-</span></div>
-                <div>Date: <span id="ticketDate">-</span></div>
-                <div>Medical Notes: <span id="ticketNotes">-</span></div>
-            </div>
-            <p style="text-align:center;margin:10px 0;">📸 Screenshot or Print this token!</p>
-            <div class="modal-buttons">
-                <button class="btn-print" onclick="printTicket()">🖨️ Print/Save PDF</button>
-                <button class="btn-whatsapp" onclick="shareTicket()">📤 Share Token</button>
-                <button class="btn-skip" onclick="closeTokenTicket()">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="detailOverlay" class="overlay" onclick="closeDetailIfOutside(event)">
-        <div id="detailCard" class="detail-card"></div>
-    </div>
-
     <div id="exportModal" class="modal">
         <div class="modal-box">
             <h2>📤 Export Data</h2>
-            <p>Copy this data and save it:</p>
             <textarea id="exportDataText" readonly></textarea>
             <div class="modal-buttons">
-                <button class="btn-copy" onclick="copyExportData()">📋 Copy to Clipboard</button>
+                <button class="btn-copy" onclick="copyExportData()">📋 Copy</button>
                 <button class="btn-skip" onclick="closeExportModal()">Close</button>
             </div>
         </div>
@@ -197,18 +120,51 @@
     <div id="importModal" class="modal">
         <div class="modal-box">
             <h2>📥 Import Data</h2>
-            <p>Paste your backup data below:</p>
             <textarea id="importDataText"></textarea>
             <div class="modal-buttons">
-                <button class="btn-paste" onclick="importFromPaste()">✅ Import Data</button>
+                <button class="btn-paste" onclick="importFromPaste()">✅ Import</button>
                 <button class="btn-skip" onclick="closeImportModal()">Cancel</button>
             </div>
         </div>
     </div>
 
-    <div id="print-overlay"></div>
+    <div id="patientDetailModal" class="modal">
+        <div class="modal-box" style="max-width: 500px; padding: 20px;">
+            <div id="patientDetailContent"></div>
+            <button class="main-btn" onclick="document.getElementById('patientDetailModal').classList.remove('active')" style="margin-top:15px;width:100%;">Close</button>
+        </div>
+    </div>
 
-    <!-- Scripts -->
+    <!-- CLEAN TOKEN MODAL: Absolutely no stray buttons outside this div -->
+    <div id="tokenTicketModal" class="modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center;">
+        <div class="modal-box" style="max-width: 380px; width:90%; background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.3); overflow:hidden;">
+            <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 20px; text-align: center; color: white;">
+                <div style="font-size: 12px; opacity: 0.9; letter-spacing: 1px; text-transform: uppercase;">Welcome to</div>
+                <div style="font-size: 22px; font-weight: 800; margin-top: 4px;">CLAKSHMI ACUPUNCTURE</div>
+            </div>
+            <div style="text-align: center; padding: 20px 20px 10px 20px;">
+                <div style="font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Your Token Number</div>
+                <div id="ticketTokenNum" style="font-size: 56px; font-weight: 900; color: #1e293b; line-height: 1;">#1</div>
+            </div>
+            <div style="position: relative; margin: 10px 0;"><div style="border-top: 2px dashed #cbd5e1; margin: 0 20px;"></div></div>
+            <div style="padding: 10px 25px 20px 25px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px;"><span style="color: #64748b;">Name</span><span id="ticketName" style="font-weight: 600; color: #0f172a; text-align: right;">Surya</span></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px;"><span style="color: #64748b;">Heale ID</span><span id="ticketId" style="font-weight: 600; color: #0f172a; text-align: right;">HEALE0002</span></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px;"><span style="color: #64748b;">Phone</span><span id="ticketPhone" style="font-weight: 600; color: #0f172a; text-align: right;">9533968978</span></div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px;"><span style="color: #64748b;">Date & Time</span><span id="ticketDate" style="font-weight: 600; color: #0f172a; text-align: right;">12/10/2026 9:49 PM</span></div>
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                    <div style="font-size: 12px; color: #64748b; margin-bottom: 4px; text-transform: uppercase;">Medical Notes</div>
+                    <div id="ticketNotes" style="font-size: 14px; color: #334155; line-height: 1.5; background: #f8fafc; padding: 10px; border-radius: 8px; border-left: 3px solid #3b82f6;">Pending visit...</div>
+                </div>
+            </div>
+            <div style="padding: 0 25px 25px 25px; display: flex; flex-direction: column; gap: 10px;">
+                <button onclick="printTicket()" style="width: 100%; padding: 14px; background: #3b82f6; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer;">🖨️ Print Ticket</button>
+                <button onclick="shareTicket()" style="width: 100%; padding: 14px; background: #10b981; color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 15px; cursor: pointer;">📤 Share via WhatsApp / SMS</button>
+                <button onclick="closeTokenTicket()" style="width: 100%; padding: 14px; background: #f1f5f9; color: #475569; border: none; border-radius: 10px; font-weight: 600; font-size: 15px; cursor: pointer;">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script src="cordova.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/database.js"></script>

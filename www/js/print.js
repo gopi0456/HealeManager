@@ -24,11 +24,11 @@ async function printTicket() {
         doc.text(tokenNum, 40, 20, { align: 'center' });
         
         doc.setFontSize(14);
-        doc.text('Heale Clinic', 40, 30, { align: 'center' });
+        doc.text('LAKSHMI ACUPUNCTURE', 40, 30, { align: 'center' });
         
         doc.setFontSize(9);
         doc.setFont(undefined, 'normal');
-        doc.text('Heale Token Ticket', 40, 36, { align: 'center' });
+        doc.text('LAKSHMI ACUPUNCTURE Token Ticket', 40, 36, { align: 'center' });
         
         doc.setLineWidth(0.5);
         doc.line(10, 40, 70, 40);
@@ -50,7 +50,7 @@ async function printTicket() {
             doc.setFont(undefined, 'normal'); doc.text(notes, 10, y, { maxWidth: 60 });
         }
         
-        const fileName = 'Heale_Ticket_' + tokenNum.replace('#', '') + '.pdf';
+        const fileName = 'Lakshmi_Ticket_' + tokenNum.replace('#', '') + '.pdf';
         const pdfBlob = doc.output('blob');
         
         // Use Capacitor Filesystem
@@ -74,7 +74,7 @@ async function printTicket() {
                     // Try to share/open the file
                     if (window.Capacitor.Plugins.Share) {
                         await window.Capacitor.Plugins.Share.share({
-                            title: 'Heale Token',
+                            title: 'Lakshmi Acupuncture Token',
                             text: 'Token ' + tokenNum + ' for ' + name,
                             url: uri,
                             dialogTitle: 'Share or Print Token'
@@ -111,18 +111,31 @@ function shareTicket() {
     const id = data.id || 'N/A';
     const phone = data.phone || 'N/A';
     const date = data.date || 'N/A';
-    
-    const message = `Heale Clinic Token\n\nToken: ${tokenNum}\nName: ${name}\nID: ${id}\nPhone: ${phone}\nDate: ${date}`;
-    
-    if (navigator.share) {
-        navigator.share({
-            title: 'Heale Clinic Token',
-            text: message
-        }).catch(err => console.error('Share failed:', err));
+    const notes = data.notes || '';
+
+    const message = `Dear ${name},\n\nPatient ID: ${id}\nDate of Visit: ${date}\nToken: ${tokenNum}\n\n- CLAKSHMI ACUPUNCTURE`;
+
+    // If phone number exists, open WhatsApp directly to that number
+    if (phone && phone !== 'N/A' && phone.length >= 10) {
+        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        const waUrl = 'https://wa.me/91' + cleanPhone + '?text=' + encodeURIComponent(message);
+        
+        // Show choice dialog
+        if (confirm('Share to ' + phone + '?\n\nClick OK for WhatsApp\nClick Cancel for SMS')) {
+            window.open(waUrl, '_blank');
+        } else {
+            window.open('sms:' + cleanPhone + '?body=' + encodeURIComponent(message), '_blank');
+        }
     } else {
-        if (navigator.clipboard) {
+        // Fallback: use system share or clipboard
+        if (navigator.share) {
+            navigator.share({
+                title: 'CLAKSHMI ACUPUNCTURE Token',
+                text: message
+            }).catch(err => console.error('Share failed:', err));
+        } else if (navigator.clipboard) {
             navigator.clipboard.writeText(message).then(() => {
-                alert('✅ Token details copied to clipboard!');
+                alert('✅ Token details copied to clipboard!\n\n' + message);
             });
         } else {
             alert(message);

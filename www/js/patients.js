@@ -1,31 +1,49 @@
+function generatePatientId(id) { return 'HEALE' + String(id).padStart(4, '0'); }
+
 function addPatient() {
-    const name = document.getElementById('name').value.trim();
-    const age = document.getElementById('age').value;
-    const phone = document.getElementById('phone').value.trim();
-    const aadhar = document.getElementById('aadhar').value.trim();
-    const address = document.getElementById('address').value.trim();
-    const notes = document.getElementById('notes').value.trim();
-    
-    if (!name || !phone || !aadhar) { alert("⚠️ Name, Phone, Aadhar required!"); return; }
-    if (phone.length !== 10 || !/^\d+$/.test(phone)) { alert("⚠️ Phone must be 10 digits!"); return; }
-    if (aadhar.length !== 5 || !/^\d+$/.test(aadhar)) { alert("⚠️ Aadhar must be 5 digits!"); return; }
-    
-    const dt = getCurrentDateTime();
+    var name = document.getElementById('name').value.trim();
+    var age = document.getElementById('age').value;
+    var phone = document.getElementById('phone').value.trim();
+    var aadhar = document.getElementById('aadhar').value.trim();
+    var address = document.getElementById('address').value.trim();
+    var notes = document.getElementById('notes').value.trim();
+
+    if (!name || !phone || !aadhar) { alert('Name, Phone, Aadhar required!'); return; }
+    if (phone.length !== 10 || !/^[0-9]+$/.test(phone)) { alert('Phone must be 10 digits!'); return; }
+    if (aadhar.length !== 5 || !/^[0-9]+$/.test(aadhar)) { alert('Aadhar must be 5 digits!'); return; }
+
+    var dt = getCurrentDateTime();
+
     db.transaction(function(tx) {
-        tx.executeSql('INSERT INTO patients (name,age,phone,aadhar,address,notes,date_time) VALUES (?,?,?,?,?,?,?)', 
-            [name,age,phone,aadhar,address,notes,dt],
-            function(tx, r) {
-                lastSavedPatient = { 
-                    id: generatePatientId(r.insertId), 
-                    name, age, phone, aadhar, address, notes, date_time: dt 
-                };
-                ['name','age','phone','aadhar','address','notes'].forEach(f => 
-                    document.getElementById(f).value = '');
-                showSuccessModal();
-            }, 
-            function(e) { alert('❌ Database Error: ' + e.message); });
+        tx.executeSql('SELECT id FROM patients WHERE name = ? AND aadhar = ?', [name, aadhar],
+            function(tx, checkRes) {
+                if (checkRes.rows.length > 0) {
+                    alert('User already exists!\n\nHeale ID: ' + generatePatientId(checkRes.rows.item(0).id));
+                    return;
+                }
+                // Registration note goes to PATIENTS table only - NOT counted as a visit
+                tx.executeSql('INSERT INTO patients (name,age,phone,aadhar,address,notes,date_time) VALUES (?,?,?,?,?,?,?)',
+                    [name, age, phone, aadhar, address, notes, dt],
+                    function(tx, r) {
+                        lastSavedPatient = {
+                            id: generatePatientId(r.insertId),
+                            name: name, age: age, phone: phone, aadhar: aadhar,
+                            address: address, notes: notes, date_time: dt
+                        };
+                        ['name','age','phone','aadhar','address','notes'].forEach(function(f) {
+                            document.getElementById(f).value = '';
+                        });
+                        showSuccessModal();
+                        if (typeof loadDashboard === 'function') loadDashboard();
+                    },
+                    function(e) { alert('Insert Error: ' + e.message); }
+                );
+            },
+            function(e) { alert('Check Error: ' + e.message); }
+        );
     });
 }
+
 
 function showSuccessModal() {
     const nextVisit = getNextVisitDate(parseDate(lastSavedPatient.date_time));
@@ -44,104 +62,206 @@ function closeModal() {
     showPage('menuPage'); 
 }
 
-function searchPatients() { 
-    const q = document.getElementById('searchInput').value.trim(); 
-    if (!q) { 
-        document.getElementById('patientList').innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Enter name or Aadhar to search</p></div>'; 
-        return; 
-    } 
-    db.transaction(function(tx) { 
-        tx.executeSql('SELECT * FROM patients WHERE name LIKE ? OR aadhar LIKE ? ORDER BY id DESC', 
-            ['%'+q+'%','%'+q+'%'], 
-            function(tx, r) { 
-                const pv = {}; 
-                for (let i = 0; i < r.rows.length; i++) { 
-                    const p = r.rows.item(i); 
-                    if (!pv[p.phone]) pv[p.phone] = {visits:[], latest:p}; 
-                    pv[p.phone].visits.push(p); 
-                } 
-                renderSearchResults(pv); 
-            }); 
-    }); 
-}
-
-function renderSearchResults(pv) {
-    const list = document.getElementById('patientList'); 
-    list.innerHTML = ''; 
-    const keys = Object.keys(pv);
-    if (!keys.length) { 
-        list.innerHTML = '<div class="empty-state"><div class="icon">😕</div><p>No patients found.</p></div>'; 
-        return; 
+function searchPatients() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) {
+        document.getElementById('patientList').innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Enter name or Heale ID to search</p></div>';
+        return;
     }
-    keys.forEach(phone => {
-        const d = pv[phone], p = d.latest;
-        const visits = d.visits.sort((a,b) => parseDate(b.date_time)-parseDate(a.date_time));
-        const pid = generatePatientId(p.id); 
-        const pd = {id:pid,dbId:p.id,name:p.name,age:p.age,phone:p.phone,aadhar:p.aadhar,address:p.address,notes:p.notes,date_time:p.date_time||'N/A'};
-        const pj = JSON.stringify(pd).replace(/'/g,"&#39;").replace(/"/g,"&quot;");
-        let vh = ''; 
-        if (visits.length > 1) { 
-            vh = '<div style="background:var(--bg-primary);padding:10px;border-radius:6px;margin:10px 0;font-size:13px;"><strong>📅 Visit History ('+visits.length+')</strong>'; 
-            visits.slice(0,5).forEach(v => { 
-                let tBadge = v.token_number ? ` <span style="background:var(--purple-color);color:white;padding:1px 6px;border-radius:10px;font-size:10px;">#${v.token_number}</span>` : ''; 
-                vh += '<div style="padding:3px 0 3px 12px;border-left:2px solid var(--border-color);color:var(--text-secondary);">'+v.date_time + tBadge +'</div>'; 
-            }); 
-            if (visits.length > 5) vh += '<div style="font-style:italic;color:var(--text-secondary);">...+'+(visits.length-5)+' more</div>'; 
-            vh += '</div>'; 
+    
+    db.transaction(function(tx) {
+        const searchPattern = '%' + q + '%';
+        const healeNumMatch = q.match(/HEALE(\d+)/i);
+        const healeNum = healeNumMatch ? parseInt(healeNumMatch[1]) : null;
+        
+        const buildResults = (patients) => {
+            const pv = {};
+            for (let i = 0; i < patients.length; i++) {
+                const p = patients[i];
+                const key = (p.name || '').trim().toLowerCase() + '|' + (p.aadhar || '').trim();
+                if (!pv[key] || p.id < pv[key].permanentId) {
+                    pv[key] = { latest: p, permanentId: p.id };
+                }
+            }
+            renderSearchResults(pv);
+        };
+        
+        if (healeNum) {
+            tx.executeSql('SELECT * FROM patients WHERE id = ?', [healeNum],
+                function(tx, r) {
+                    const patients = [];
+                    for (let i = 0; i < r.rows.length; i++) patients.push(r.rows.item(i));
+                    buildResults(patients);
+                });
+        } else {
+            tx.executeSql('SELECT * FROM patients WHERE name LIKE ? OR aadhar LIKE ? OR phone LIKE ?',
+                [searchPattern, searchPattern, searchPattern],
+                function(tx, r) {
+                    const patients = [];
+                    for (let i = 0; i < r.rows.length; i++) patients.push(r.rows.item(i));
+                    buildResults(patients);
+                });
         }
-        list.innerHTML += '<div class="patient-card"><h3>'+p.name+'</h3><p>📞 '+p.phone+' | 🆔 '+pid+'</p><p>📅 Last Visit: '+(p.date_time||'N/A')+'</p>' + vh + 
-            '<div class="update-notes-section"><textarea id="un_'+p.id+'" placeholder="Add new visit notes for today..."></textarea><button class="btn-update-notes" onclick="updatePatientNotes(\''+p.phone+'\',document.getElementById(\'un_'+p.id+'\').value,this)">💾 Save Today Visit Notes</button></div>' +
-            '<div class="action-buttons"><button class="btn-view" onclick=\'showPatientDetail('+pj+')\'>👁️ View Details</button><button class="btn-token" onclick="addToToken('+p.id+',\''+p.name.replace(/'/g,"\\'")+'\',\''+p.phone+'\',this)">🎟️ Add Token</button><button class="btn-token" style="background:var(--warning-color);" onclick="checkAndReprint(\''+p.phone+'\')">🖨️ Reprint Today Token</button></div></div>';
     });
 }
 
-function updatePatientNotes(patientPhone, notes, btn) { 
-    if (!notes.trim()) { alert('⚠️ Please enter medical notes!'); return; } 
-    const dt = getCurrentDateTime(); 
-    db.transaction(function(tx) { 
-        tx.executeSql('INSERT INTO patients (name,phone,notes,date_time) VALUES ((SELECT name FROM patients WHERE phone=? ORDER BY id DESC LIMIT 1),?,?,?)', 
-            [patientPhone, patientPhone, notes, dt], 
-            function() { 
-                alert('✅ Visit notes saved!\nDate: ' + dt); 
-                btn.textContent = '✓ Saved'; 
-                btn.disabled = true; 
-                btn.style.background = '#6b7280'; 
-            }); 
-    }, function(e) { alert('❌ Error: ' + e.message); }); 
+function renderSearchResults(pv) {
+    var list = document.getElementById('patientList');
+    if (!list) return;
+    list.innerHTML = '';
+    var keys = Object.keys(pv);
+    if (!keys.length) {
+        list.innerHTML = '<div class="empty-state"><div class="icon">😕</div><p>No patients found.</p></div>';
+        return;
+    }
+    
+    keys.forEach(function(key) {
+        var d = pv[key];
+        var p = d.latest;
+        var pid = d.permanentId;
+        var healeIdStr = 'HEALE' + String(pid).padStart(4, '0');
+        
+        // Get registration date safely
+        var regDate = 'N/A';
+        var today = new Date();
+        var lastVisit = today; // Default to today
+        
+        if (p.date_time && String(p.date_time).length >= 10) {
+            regDate = String(p.date_time).substring(0, 10);
+            // Replace space with 'T' to make it a valid ISO date for all browsers
+            var dateStr = String(p.date_time).replace(' ', 'T');
+            var parsedDate = new Date(dateStr);
+            if (!isNaN(parsedDate.getTime())) {
+                lastVisit = parsedDate;
+            }
+        }
+        
+        var diffTime = Math.abs(today - lastVisit);
+        var weeksSince = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000));
+        var missedWeeks = weeksSince === 0 ? 'Today' : weeksSince + ' week' + (weeksSince > 1 ? 's' : '') + ' ago';
+        
+        var safeName = p.name.replace(/'/g, "\\'");
+        
+        var html = '<div class="patient-card">';
+        html += '<div class="patient-header">';
+        html += '<div class="patient-name">' + p.name + '</div>';
+        html += '<div class="heale-id-badge">' + healeIdStr + '</div>';
+        html += '</div>';
+        html += '<div class="patient-details">';
+        html += '<span>📞 ' + p.phone + '</span>';
+        html += '<span>🆔 ' + p.aadhar + '</span>';
+        html += '</div>';
+        html += '<div class="patient-details" style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e2e8f0;">';
+        html += '<span style="color: #3b82f6;">📅 Reg: <strong>' + regDate + '</strong></span>';
+        html += '<span style="color: #f59e0b;">⏰ Last: <strong>' + missedWeeks + '</strong></span>';
+        html += '</div>';
+        html += '<div class="patient-actions" style="margin-top: 12px;">';
+        html += '<button class="btn-token" onclick="addToToken(' + pid + ', \'' + safeName + '\', \'' + p.phone + '\', this)">🎟️ Add Token</button>';
+        html += '<button class="btn-view" onclick="showPatientDetail(' + pid + ')">👁️ View</button>';
+        html += '</div>';
+        html += '</div>';
+        list.innerHTML += html;
+    });
 }
 
-function showPatientDetail(p) { 
-    db.transaction(function(tx) { 
-        tx.executeSql('SELECT * FROM patients WHERE phone=? ORDER BY id DESC', [p.phone], 
-            function(tx, r) { 
-                let hh = ''; 
-                if (r.rows.length > 0) { 
-                    hh = '<div style="background:var(--bg-primary);padding:12px;border-radius:8px;margin:16px 0;"><div style="font-weight:bold;color:var(--accent-color);margin-bottom:10px;">📋 Heale History ('+r.rows.length+' visits)</div>'; 
-                    for (let i = 0; i < r.rows.length; i++) { 
-                        const v = r.rows.item(i); 
-                        let tBadge = v.token_number ? `<span class="token-badge-history">Token #${v.token_number}</span>` : ''; 
-                        hh += '<div style="background:var(--bg-secondary);padding:10px;margin-bottom:8px;border-radius:6px;border-left:3px solid var(--accent-color);"><div style="font-weight:bold;color:var(--accent-color);font-size:13px;margin-bottom:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">📅 '+v.date_time+' '+tBadge+'</div><div style="color:var(--text-secondary);font-size:13px;">'+(v.notes||'No notes')+'</div></div>'; 
-                    } 
-                    hh += '</div>'; 
-                } 
-                document.getElementById('detailCard').innerHTML = 
-                    '<h2>🏥 Patient Details</h2>' +
-                    '<div class="patient-id">ID: '+p.id+'</div>' +
-                    '<span class="patient-date">📅 '+(p.date_time||'N/A')+'</span>' +
-                    '<hr style="border:none;border-top:1px solid var(--border-color);margin:16px 0;">' +
-                    '<div class="detail-row"><span class="detail-label">Name:</span> '+p.name+'</div>' +
-                    '<div class="detail-row"><span class="detail-label">Age:</span> '+(p.age||'N/A')+'</div>' +
-                    '<div class="detail-row"><span class="detail-label">Phone:</span> '+p.phone+'</div>' +
-                    '<div class="detail-row"><span class="detail-label">Aadhar:</span> '+p.aadhar+'</div>' +
-                    '<div class="detail-row"><span class="detail-label">Address:</span> '+(p.address||'N/A')+'</div>' +
-                    '<div class="detail-row"><span class="detail-label">Notes:</span><br>'+(p.notes||'None')+'</div>' + 
-                    hh + 
-                    '<div class="send-buttons"><button class="btn-whatsapp" onclick=\'sendWhatsAppFromPatient('+JSON.stringify(p).replace(/'/g,"&#39;")+')\'>💬 WhatsApp</button><button class="btn-sms" onclick=\'sendSMSFromPatient('+JSON.stringify(p).replace(/'/g,"&#39;")+')\'>📱 SMS</button></div>' +
-                    '<button class="main-btn" style="margin-top:10px;background:var(--purple-color);" onclick=\'addToToken('+p.dbId+',"'+p.name.replace(/"/g,'\\"')+'","'+p.phone+'",null);closeDetail();\'>🎟️ Add to Today Token</button>' +
-                    '<button class="close-btn" onclick="closeDetail()">Close</button>'; 
-                document.getElementById('detailOverlay').classList.add('active'); 
-            }); 
-    }); 
+function updatePatientNotes(patientId, notes, btn) {
+    if (!notes.trim()) { alert('⚠️ Please enter medical notes!'); return; }
+    const dt = getCurrentDateTime();
+    db.transaction(function(tx) {
+        tx.executeSql('INSERT INTO visits (patient_id, notes, date_time) VALUES (?,?,?)',
+            [patientId, notes, dt],
+            function() {
+                alert('✅ Visit saved! Heale ID: ' + generatePatientId(patientId) + '\nDate: ' + dt);
+                if (btn) {
+                    btn.textContent = '✓ Saved';
+                    btn.disabled = true;
+                    btn.style.background = '#6b7280';
+                }
+                if (typeof searchPatients === 'function') searchPatients();
+                if (typeof loadDashboard === 'function') loadDashboard();
+            },
+            function(e) { alert('❌ Error: ' + e.message); }
+        );
+    });
+}
+
+function showPatientDetail(patientId) {
+    db.transaction(function(tx) {
+        tx.executeSql('SELECT * FROM patients WHERE id = ?', [patientId],
+            function(tx, pRes) {
+                if (pRes.rows.length === 0) { alert('❌ Patient not found'); return; }
+                const p = pRes.rows.item(0);
+                const healeId = 'HEALE' + String(p.id).padStart(4, '0');
+                
+                tx.executeSql('SELECT * FROM visits WHERE patient_id = ? ORDER BY date_time DESC', [patientId],
+                    function(tx, vRes) {
+                        const totalVisits = vRes.rows.length; // Count ONLY token visits
+                        
+                        let html = `
+                            <div class="patient-detail-header">
+                                <div class="detail-name">${p.name}</div>
+                                <div class="detail-heale-id">${healeId}</div>
+                                <div class="detail-reg-date">📅 Registered: ${p.date_time ? String(p.date_time).substring(0,10) : 'N/A'} | Total Visits: ${totalVisits}</div>
+                            </div>
+                            <div class="patient-detail-info">
+                                <div class="info-row"><span class="info-icon">📞</span> <span>${p.phone}</span></div>
+                                <div class="info-row"><span class="info-icon">🆔</span> <span>Aadhar: ${p.aadhar}</span></div>
+                                <div class="info-row"><span class="info-icon">🎂</span> <span>Age: ${p.age || 'N/A'}</span></div>
+                                <div class="info-row"><span class="info-icon">📍</span> <span>${p.address || 'N/A'}</span></div>
+                            </div>
+                            <div class="visit-history-section">
+                                <h3>📋 History</h3>
+                                <div class="visit-list">`;
+                        
+                        // 1. Show Registration Notes if they exist (does not affect visit count)
+                        if (p.notes && String(p.notes).trim() !== '') {
+                            html += `
+                                <div class="visit-item" style="border-left-color: #10b981;">
+                                    <div class="visit-item-header">
+                                        <span class="visit-date">📝 Registration Notes</span>
+                                    </div>
+                                    <div class="visit-notes">${p.notes}</div>
+                                </div>`;
+                        }
+
+                        // 2. Show Token Visits
+                        if (totalVisits === 0 && (!p.notes || String(p.notes).trim() === '')) {
+                            html += '<div class="empty-visit">No visits recorded yet.</div>';
+                        } else {
+                            for (let i = 0; i < totalVisits; i++) {
+                                const v = vRes.rows.item(i);
+                                const tokenBadge = v.token_number ? `<span class="token-badge">Token #${v.token_number}</span>` : '';
+                                html += `
+                                    <div class="visit-item">
+                                        <div class="visit-item-header">
+                                            <span class="visit-date">🕒 ${v.date_time}</span>
+                                            ${tokenBadge}
+                                        </div>
+                                        <div class="visit-notes">${v.notes || 'No notes recorded'}</div>
+                                    </div>`;
+                            }
+                        }
+                        html += `</div></div>`;
+                        
+                        let modal = document.getElementById('patientDetailModal');
+                        if (!modal) {
+                            modal = document.createElement('div');
+                            modal.id = 'patientDetailModal';
+                            modal.className = 'modal';
+                            modal.innerHTML = `
+                                <div class="modal-box detail-modal-box">
+                                    <div id="patientDetailContent"></div>
+                                    <button class="btn-close-modal" onclick="document.getElementById('patientDetailModal').classList.remove('active')">Close</button>
+                                </div>`;
+                            document.body.appendChild(modal);
+                        }
+                        document.getElementById('patientDetailContent').innerHTML = html;
+                        modal.classList.add('active');
+                    },
+                    function(e) { alert('❌ Visit query error: ' + e.message); });
+            },
+            function(e) { alert('❌ Patient query error: ' + e.message); });
+    });
 }
 
 function closeDetail() { 
@@ -156,13 +276,13 @@ function loadDashboard() {
     const now = new Date(), today = getTodayDate();
     const ms = '01/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear(); 
     db.transaction(function(tx) { 
-        tx.executeSql('SELECT COUNT(DISTINCT phone) as c FROM patients', [], 
+        tx.executeSql('SELECT COUNT(*) as c FROM patients', [], 
             function(tx,r){ document.getElementById('totalPatients').textContent = r.rows.item(0).c; }); 
-        tx.executeSql('SELECT COUNT(DISTINCT phone) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
+        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
             function(tx,r){ document.getElementById('todayPatients').textContent = r.rows.item(0).c; }); 
         tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date=?', [today], 
             function(tx,r){ document.getElementById('todayTokens').textContent = r.rows.item(0).c; }); 
-        tx.executeSql('SELECT COUNT(DISTINCT phone) as c FROM patients WHERE date_time>=?', [ms], 
+        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time>=?', [ms], 
             function(tx,r){ document.getElementById('monthPatients').textContent = r.rows.item(0).c; }); 
         tx.executeSql('SELECT * FROM patients', [], function(tx,r) { 
             const td = new Date(); td.setHours(0,0,0,0); 
@@ -183,4 +303,47 @@ function loadDashboard() {
                 document.getElementById('avgPerDay').textContent = dp>0?Math.round(r.rows.item(0).c/dp*10)/10:0; 
             }); 
     }); 
+}
+
+
+// ===== REPRINT FROM HEALE RECORD =====
+function reprintFromHealeRecord(patientId, patientName, patientPhone) {
+    console.log("🖨️ Reprint from Heale Record for ID:", patientId);
+    
+    db.transaction(function(tx) {
+        tx.executeSql('SELECT notes FROM visits WHERE patient_id = ? ORDER BY date_time DESC LIMIT 1', [patientId],
+            function(tx, res) {
+                var notes = 'No previous notes';
+                if (res.rows.length > 0 && res.rows.item(0) && res.rows.item(0).notes) {
+                    notes = res.rows.item(0).notes;
+                }
+                
+                var healeId = 'HEALE' + String(patientId).padStart(4, '0');
+                var today = new Date().toISOString().split('T')[0];
+                var currentTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                
+                // Show the token ticket modal
+                var modal = document.getElementById('tokenTicketModal');
+                if (!modal) {
+                    alert('❌ Token modal not found');
+                    return;
+                }
+                
+                document.getElementById('ticketTokenNum').textContent = 'REPRINT';
+                document.getElementById('ticketName').textContent = patientName;
+                document.getElementById('ticketId').textContent = healeId;
+                document.getElementById('ticketPhone').textContent = patientPhone;
+                document.getElementById('ticketDate').textContent = currentTime;
+                document.getElementById('ticketNotes').textContent = notes;
+                
+                modal.classList.add('active');
+                modal.style.display = 'flex';
+                console.log("✅ Reprint modal opened");
+            },
+            function(err) {
+                console.error("❌ Reprint error:", err);
+                alert('❌ Error loading notes: ' + err.message);
+            }
+        );
+    });
 }

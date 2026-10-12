@@ -9,7 +9,7 @@ function openExternalLink(url) {
 function generateMessageText(p) {
     const vd = p.date_time ? p.date_time.split(' ')[0] : 'N/A';
     const nextVisit = getNextVisitDate(parseDate(p.date_time));
-    return 'Dear ' + p.name + ',\n\nPatient ID: ' + p.id + '\nDate of Visit: ' + vd + '\n\nPlease visit again on: ' + formatDate(nextVisit) + ' (' + DAY_NAMES[nextVisit.getDay()] + ')\n\n- Heale Clinic';
+    return 'Dear ' + p.name + ',\n\nPatient ID: ' + p.id + '\nDate of Visit: ' + vd + '\n\nPlease visit again on: ' + formatDate(nextVisit) + ' (' + DAY_NAMES[nextVisit.getDay()] + ')\n\n- LAKSHMI ACUPUNCTURE';
 }
 
 function sendSMS() {
