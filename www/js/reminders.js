@@ -168,20 +168,18 @@ function filterReminders(selectedDay) {
 // ==========================================
 // BULLETPROOF MANUAL TAP QUEUE SYSTEM
 // ==========================================
+
+// ==========================================
+// FINAL BULK TAP-QUEUE SYSTEM
+// ==========================================
 function showBulkQueue(day, type) {
-    if (!window.reminderData) {
-        alert('DEBUG ERROR: Reminder data has not loaded yet. Please wait a few seconds and try again.');
-        return;
-    }
-    
     var pts = window.reminderData[day] || [];
     if (!pts || pts.length === 0) {
-        // Find which days actually have patients
-        var availableDays = Object.keys(window.reminderData).filter(function(d) {
-            return window.reminderData[d] && window.reminderData[d].length > 0;
-        }).join(', ') || 'None';
-        
-        alert('DEBUG INFO:\n\nNo patients found for: "' + day + '"\n\nAvailable days with patients: ' + availableDays + '\n\nPlease make sure you selected a day from the dropdown that actually has patients scheduled.');
+        alert('No patients found for ' + day);
+        return;
+    }
+
+    if (!confirm('Start Bulk ' + (type === 'whatsapp' ? 'WhatsApp' : 'SMS') + ' for ' + pts.length + ' patients?\n\nIMPORTANT: You will see a list of buttons. Tap each one to send, then come back and tap the next.')) {
         return;
     }
 
@@ -197,8 +195,8 @@ function showBulkQueue(day, type) {
     var typeName = type === 'whatsapp' ? 'WhatsApp' : 'SMS';
     
     var html = '<div style="padding:20px;">';
-    html += '<h3 style="text-align:center; margin-bottom:10px; color:#3b82f6;">📤 Bulk ' + typeName + ' Queue</h3>';
-    html += '<p style="text-align:center; color:#666; margin-bottom:20px; font-size:14px;">Android blocks automatic sending to prevent spam.<br>Tap each button below to send one by one.</p>';
+    html += '<h3 style="text-align:center; margin-bottom:10px; color:#3b82f6;">📤 Bulk ' + typeName + ' Queue (' + pts.length + ' patients)</h3>';
+    html += '<p style="text-align:center; color:#666; margin-bottom:20px; font-size:14px;">Tap each button to send. After sending, come back and tap the next one.</p>';
     
     var phoneNumbers = Object.keys(grouped);
     phoneNumbers.forEach(function(phone, index) {
@@ -217,7 +215,7 @@ function showBulkQueue(day, type) {
 
         var patientNames = patients.map(function(p) { return p.name; }).join(' & ');
 
-        // REAL <a> TAG THAT THE USER PHYSICALLY TAPS (100% WebView safe)
+        // REAL <a> TAG - 100% WebView safe, requires physical tap
         html += '<a href="' + url + '" target="_blank" style="display:block; background:' + (type === 'whatsapp' ? '#10b981' : '#3b82f6') + '; color:white; padding:15px; border-radius:8px; text-decoration:none; font-weight:bold; text-align:center; margin-bottom:12px; font-size:16px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">';
         html += '💬 Send to: ' + patientNames + '<br><span style="font-size:14px; font-weight:normal; opacity:0.9;">' + phone + '</span>';
         html += '</a>';
