@@ -169,9 +169,19 @@ function filterReminders(selectedDay) {
 // BULLETPROOF MANUAL TAP QUEUE SYSTEM
 // ==========================================
 function showBulkQueue(day, type) {
+    if (!window.reminderData) {
+        alert('DEBUG ERROR: Reminder data has not loaded yet. Please wait a few seconds and try again.');
+        return;
+    }
+    
     var pts = window.reminderData[day] || [];
     if (!pts || pts.length === 0) {
-        alert('No patients found for ' + day + '. Please select a day from the dropdown first.');
+        // Find which days actually have patients
+        var availableDays = Object.keys(window.reminderData).filter(function(d) {
+            return window.reminderData[d] && window.reminderData[d].length > 0;
+        }).join(', ') || 'None';
+        
+        alert('DEBUG INFO:\n\nNo patients found for: "' + day + '"\n\nAvailable days with patients: ' + availableDays + '\n\nPlease make sure you selected a day from the dropdown that actually has patients scheduled.');
         return;
     }
 
