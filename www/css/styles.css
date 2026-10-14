@@ -142,7 +142,7 @@ button:active {
 /* Dashboard Grid - Original Arrangement */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 15px;
     margin-bottom: 20px;
 }
