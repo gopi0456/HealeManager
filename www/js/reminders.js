@@ -165,58 +165,29 @@ function filterReminders(selectedDay) {
 
 // ORIGINAL WORKING BULK FUNCTIONS
 
+
 function sendBulkSMS(day) {
-    alert("DEBUG 1: sendBulkSMS called for " + day);
     var pts = window.reminderData[day] || [];
-    alert("DEBUG 2: Found " + pts.length + " patients for " + day);
-    
-    if (!pts.length) { 
-        alert('No patients for ' + day); 
-        return; 
-    }
+    if (!pts.length) { alert('No patients for ' + day); return; }
     
     var firstPt = pts[0];
     var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
+    var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
+    var phones = pts.map(function(p) { return p.phone; }).join(',');
     
-    try {
-        var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
-        alert("DEBUG 3: Message generated successfully.");
-        
-        var phones = pts.map(function(p) { return p.phone; }).join(',');
-        alert("DEBUG 4: Opening SMS for numbers: " + phones);
-        
-        // window.location.href is much more reliable than window.open in Cordova/Capacitor
-        window.location.href = 'sms:' + phones + '?body=' + encodeURIComponent(msg);
-    } catch (e) {
-        alert("DEBUG ERROR in sendBulkSMS: " + e.message);
-        console.error(e);
-    }
+    // Direct redirect, exactly like standard web behavior
+    window.location.href = 'sms:' + phones + '?body=' + encodeURIComponent(msg);
 }
 
 function sendBulkWhatsApp(day) {
-    alert("DEBUG 1: sendBulkWhatsApp called for " + day);
     var pts = window.reminderData[day] || [];
-    alert("DEBUG 2: Found " + pts.length + " patients for " + day);
-    
-    if (!pts.length) { 
-        alert('No patients for ' + day); 
-        return; 
-    }
+    if (!pts.length) { alert('No patients for ' + day); return; }
     
     var firstPt = pts[0];
     var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
+    var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
+    var cleanPhone = String(firstPt.phone).replace(/\D/g, '');
     
-    try {
-        var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
-        alert("DEBUG 3: Message generated successfully.");
-        
-        var cleanPhone = String(firstPt.phone).replace(/\D/g, '');
-        alert("DEBUG 4: Opening WhatsApp for: " + cleanPhone);
-        
-        // window.location.href is much more reliable than window.open in Cordova/Capacitor
-        window.location.href = 'https://wa.me/91' + cleanPhone + '?text=' + encodeURIComponent(msg);
-    } catch (e) {
-        alert("DEBUG ERROR in sendBulkWhatsApp: " + e.message);
-        console.error(e);
-    }
+    // Direct redirect, exactly like standard web behavior
+    window.location.href = 'https://wa.me/91' + cleanPhone + '?text=' + encodeURIComponent(msg);
 }
