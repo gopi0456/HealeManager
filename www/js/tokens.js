@@ -16,89 +16,20 @@ function addToToken(dbId, name, phone, btn) {
                         return;
                     }
 
-                    tx.executeSql('SELECT MAX(max_t) as max_t FROM (SELECT MAX(token_number) as max_t FROM tokens WHERE token_date=? UNION ALL SELECT MAX(token_number) as max_t FROM visits WHERE date_time LIKE ?)',
-                        [today, today + '%'], function(tx, res) {
-                            let nextTokenNum = 1;
-                            if (res.rows.length > 0) {
-                                let max_t = res.rows.item(0).max_t;
-                                if (max_t !== null && max_t !== undefined) {
-                                    nextTokenNum = parseInt(max_t, 10) + 1;
-                                }
+                    tx.executeSql('SELECT MAX(token_number) as max_t FROM tokens WHERE token_date=?', [today], function(tx, res1) {
+                            let maxFromTokens = 0;
+                            if (res1.rows.length > 0 && res1.rows.item(0).max_t !== null) {
+                                maxFromTokens = parseInt(res1.rows.item(0).max_t, 10);
                             }
-
-                            tx.executeSql('INSERT INTO tokens (patient_id, patient_name, patient_phone, token_date, created_at, token_number) VALUES (?,?,?,?,?,?)',
-                                [dbId, name, phone, today, currentTime, nextTokenNum],
-                                function() {
-                                    window.currentTicket = {
-                                        tokenNum: '#' + nextTokenNum,
-                                        name: name,
-                                        id: fullHeliId,
-                                        phone: phone,
-                                        date: currentTime,
-                                        notes: 'Pending visit...'
-                                    };
-
-                                    document.getElementById('ticketTokenNum').textContent = '#' + nextTokenNum;
-                                    document.getElementById('ticketName').textContent = name;
-                                    document.getElementById('ticketId').textContent = fullHeliId;
-                                    document.getElementById('ticketPhone').textContent = phone;
-                                    document.getElementById('ticketDate').textContent = currentTime;
-                                    document.getElementById('ticketNotes').textContent = 'Pending visit...';
-
-                                    const modal = document.getElementById('tokenTicketModal');
-                                    if (modal) {
-                                        modal.classList.add('active');
-                                        modal.style.display = 'flex';
-                                    }
-
-                                    if (btn) {
-                                        btn.textContent = '✓ Token #' + nextTokenNum;
-                                        btn.classList.add('added');
-                                    }
-                                    if (typeof loadTodayTokens === 'function') loadTodayTokens();
-                                },
-                                function(err) { alert("❌ DB Error: " + err.message); }
-                            );
-                        });
-                });
-        });
-    } catch (e) {
-        console.error("❌ addToToken error:", e);
-        alert("Error adding token: " + e.message);
-    }
-}
-
-// ==========================================
-// 2. LOAD TODAY'S TOKENS
-// ==========================================
-
-// ==========================================
-// AUTO-CLEANUP: Move yesterday's unserved tokens to visits
-// ==========================================
-function cleanupExpiredTokens() {
-    if (typeof db === 'undefined' || !db) return;
-    const today = getTodayDate();
-    
-    db.transaction(function(tx) {
-        tx.executeSql('SELECT id, patient_id, patient_name, token_number, token_date FROM tokens WHERE token_date != ?', [today], 
-        function(tx, res) {
-            let count = 0;
-            for (let i = 0; i < res.rows.length; i++) {
-                let row = res.rows.item(i);
-                let note = 'Not visited today. Token: #' + row.token_number + ' on ' + row.token_date;
-                
-                // Move to visits table
-                tx.executeSql('INSERT INTO visits (patient_id, notes, date_time, token_number, visit_date) VALUES (?, ?, ?, ?, ?)',
-                    [row.patient_id, note, row.token_date, row.token_number, row.token_date]);
-                
-                // Delete from tokens
-                tx.executeSql('DELETE FROM tokens WHERE id = ?', [row.id]);
-                count++;
-            }
-            if (count > 0) {
-                console.log('✅ Auto-cleaned ' + count + ' expired token(s)');
-            }
-        });
+                            
+                            tx.executeSql('SELECT MAX(token_number) as max_t FROM visits WHERE date_time LIKE ?', [today + '%'], function(tx, res2) {
+                                let maxFromVisits = 0;
+                                if (res2.rows.length > 0 && res2.rows.item(0).max_t !== null) {
+                                    maxFromVisits = parseInt(res2.rows.item(0).max_t, 10);
+                                }
+                                
+                                let nextTokenNum = Math.max(maxFromTokens, maxFromVisits) + 1;
+                                console.log('🔍 Token Debug - From tokens:', maxFromTokens, '| From visits:', maxFromVisits, '| Next:', nextTokenNum);
     });
 }
 
