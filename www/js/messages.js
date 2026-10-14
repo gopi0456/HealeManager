@@ -77,6 +77,13 @@ function sendBulkSMS(dayName) {
     }
     if (!confirm('Starting Bulk SMS for ' + patients.length + ' Heale?\n\nIMPORTANT: SMS will open for each patient. You must tap SEND, then switch back to this app.')) return;
     
+    function fmtDateSafe(d) {
+        if (!d) return 'N/A';
+        if (!(d instanceof Date)) { try { d = new Date(d); } catch(e) { return 'N/A'; } }
+        if (isNaN(d.getTime())) return 'N/A';
+        return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+    }
+
     let count = 0;
     function sendNext() {
         if (count >= patients.length) {
@@ -84,21 +91,20 @@ function sendBulkSMS(dayName) {
             return;
         }
         const p = patients[count];
-        // Safe fallback to ensure visit date and next visit date show up correctly
-        const msg = generateMessageText({
-            name: p.name,
-            date_time: p.visits ? p.visits[0].date_time : p.date_time,
-            id: generatePatientId(p.id)
-        });
+        const healeId = generatePatientId(p.id);
         
-        if (window.sms) {
-            window.sms.send(p.phone, msg, {intent: 'INTENT'}, function() {}, function() {});
-        } else {
-            openExternalLink('sms:' + p.phone + '?body=' + encodeURIComponent(msg));
+        // EXACT MESSAGE FORMAT AS INDIVIDUAL WHATSAPP
+        const msg = "Dear " + p.name + ",\n\nHeale ID: " + healeId + "\nDate of Visit: " + fmtDateSafe(p.visitDate) + "\nYOURS NEXT VISIT on: " + fmtDateSafe(p.nextVisitDate) + "\n(" + dayName + ") 5:00AM TO 7:00AM\n\n- CLAKSHMI ACUPUNCTURE";
+        
+        // Use window.location.href to prevent app from exiting/crashing
+        try {
+            window.location.href = 'sms:' + p.phone + '?body=' + encodeURIComponent(msg);
+        } catch (e) {
+            console.error('SMS error:', e);
         }
         
         count++;
-        setTimeout(sendNext, 2500);
+        setTimeout(sendNext, 3000); // 3 second delay
     }
     sendNext();
 }
@@ -111,6 +117,13 @@ function sendBulkWhatsApp(dayName) {
     }
     if (!confirm('Starting Bulk WhatsApp for ' + patients.length + ' Heale?\n\nIMPORTANT: WhatsApp will open for each patient. You must tap SEND in WhatsApp, then switch back to this app.')) return;
     
+    function fmtDateSafe(d) {
+        if (!d) return 'N/A';
+        if (!(d instanceof Date)) { try { d = new Date(d); } catch(e) { return 'N/A'; } }
+        if (isNaN(d.getTime())) return 'N/A';
+        return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+    }
+
     let count = 0;
     function sendNext() {
         if (count >= patients.length) {
@@ -118,18 +131,18 @@ function sendBulkWhatsApp(dayName) {
             return;
         }
         const p = patients[count];
-        // Safe fallback to ensure visit date and next visit date show up correctly
-        const msg = generateMessageText({
-            name: p.name,
-            date_time: p.visits ? p.visits[0].date_time : p.date_time,
-            id: generatePatientId(p.id)
-        });
+        const healeId = generatePatientId(p.id);
+        
+        // EXACT MESSAGE FORMAT AS INDIVIDUAL WHATSAPP
+        const msg = "Dear " + p.name + ",\n\nHeale ID: " + healeId + "\nDate of Visit: " + fmtDateSafe(p.visitDate) + "\nYOURS NEXT VISIT on: " + fmtDateSafe(p.nextVisitDate) + "\n(" + dayName + ") 5:00AM TO 7:00AM\n\n- CLAKSHMI ACUPUNCTURE";
+        
         let ph = p.phone;
         if (ph.length === 10) ph = '91' + ph;
+        
         openExternalLink('https://wa.me/' + ph + '?text=' + encodeURIComponent(msg));
         
         count++;
-        setTimeout(sendNext, 4000);
+        setTimeout(sendNext, 4000); // 4 second delay for WhatsApp
     }
     sendNext();
 }
