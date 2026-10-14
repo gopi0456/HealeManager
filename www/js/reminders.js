@@ -1,8 +1,6 @@
 function fmtDate(d) {
     if (!d) return 'N/A';
-    if (!(d instanceof Date)) { 
-        try { d = parseDate(d); } catch(e) { d = null; } 
-    }
+    if (!(d instanceof Date)) { try { d = parseDate(d); } catch(e) { d = null; } }
     if (!d) return 'N/A';
     return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
 }
@@ -33,7 +31,6 @@ function loadReminders() {
     var patientData = {};
     var idToKey = {};
 
-    // STEP 1: Load from patients table
     db.transaction(function(tx) {
         tx.executeSql('SELECT * FROM patients ORDER BY id ASC', [], function(tx, res) {
             for (var i = 0; i < res.rows.length; i++) {
@@ -41,52 +38,33 @@ function loadReminders() {
                 if (!p) continue;
                 var key = String(p.name || '').trim().toLowerCase() + '|' + String(p.aadhar || '').trim();
                 idToKey[p.id] = key;
-                
                 if (!patientData[key]) {
-                    patientData[key] = { 
-                        lastName: p.name, 
-                        lastId: p.id, 
-                        phone: p.phone, 
-                        aadhar: p.aadhar,
-                        regDate: null,
-                        visitDate: null 
-                    };
+                    patientData[key] = { lastDate: null, visitDate: null, lastName: p.name, lastId: p.id, phone: p.phone, aadhar: p.aadhar };
                 }
-                
-                // Keep the lowest ID as the primary record
                 if (p.id < patientData[key].lastId) {
                     patientData[key].lastId = p.id;
                     patientData[key].lastName = p.name;
                     patientData[key].phone = p.phone;
                     patientData[key].aadhar = p.aadhar;
                 }
-                
                 var vd = parseDate(p.date_time);
-                if (vd && (!patientData[key].regDate || vd > patientData[key].regDate)) {
-                    patientData[key].regDate = vd;
-                }
+                if (vd && (!patientData[key].lastDate || vd > patientData[key].lastDate)) patientData[key].lastDate = vd;
             }
         }, function(tx, e) { console.error('patients error', e); });
     }, function(e) { console.error('patients tx error', e); }, function() {
 
-        // STEP 2: Load latest visit date from VISITS table
         db.transaction(function(tx2) {
             tx2.executeSql('SELECT patient_id, date_time FROM visits', [], function(tx2, vres) {
                 for (var j = 0; j < vres.rows.length; j++) {
                     var v = vres.rows.item(j);
                     var key = idToKey[v.patient_id];
                     if (!key || !patientData[key]) continue;
-                    
                     var vdate = parseDate(v.date_time);
                     if (!vdate) continue;
-                    
-                    if (!patientData[key].visitDate || vdate > patientData[key].visitDate) {
-                        patientData[key].visitDate = vdate;
-                    }
+                    if (!patientData[key].visitDate || vdate > patientData[key].visitDate) patientData[key].visitDate = vdate;
                 }
             }, function(tx2, e) { console.error('visits error', e); });
         }, function(e) { console.error('visits tx error', e); }, function() {
-            // STEP 3: Render UI
             buildReminderUI(patientData);
         });
     });
@@ -95,40 +73,32 @@ function loadReminders() {
 function buildReminderUI(patientData) {
     var container = document.getElementById('reminderContainer');
     if (!container) return;
-    
-    var today = new Date(); 
-    today.setHours(0,0,0,0);
+    var today = new Date(); today.setHours(0,0,0,0);
 
     var remindersByDay = { Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: [], Sunday: [] };
     var total = 0;
 
     Object.keys(patientData).forEach(function(key) {
         var pd = patientData[key];
-        
-        // Use visit date if available, otherwise fallback to registration date
-        var baseDate = pd.visitDate || pd.regDate;
+        var baseDate = pd.visitDate || pd.lastDate;
         if (!baseDate) return;
 
         var nextVisitDate = new Date(baseDate.getTime());
         nextVisitDate.setDate(nextVisitDate.getDate() + 7);
 
         var daysUntilVisit = Math.floor((nextVisitDate - today) / 86400000);
-        var dayName = (typeof DAY_NAMES !== 'undefined') 
-            ? DAY_NAMES[nextVisitDate.getDay()] 
-            : nextVisitDate.toLocaleDateString('en-US', { weekday: 'long' });
+        
+        // Safe day name calculation
+        var dayNamesArr = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        var dayName = dayNamesArr[nextVisitDate.getDay()];
             
         var missedWeeks = daysUntilVisit < 0 ? Math.abs(Math.floor(daysUntilVisit / 7)) : 0;
 
         total++;
         remindersByDay[dayName].push({
-            name: pd.lastName, 
-            phone: pd.phone, 
-            aadhar: pd.aadhar, 
-            id: pd.lastId,
-            visitDate: baseDate,       // This ensures Date of Visit is always populated
-            nextVisitDate: nextVisitDate,
-            daysUntilVisit: daysUntilVisit, 
-            missedWeeks: missedWeeks
+            name: pd.lastName, phone: pd.phone, aadhar: pd.aadhar, id: pd.lastId,
+            visitDate: baseDate, nextVisitDate: nextVisitDate,
+            daysUntilVisit: daysUntilVisit, missedWeeks: missedWeeks
         });
     });
 
@@ -171,13 +141,10 @@ function buildReminderUI(patientData) {
             html += '<span style="background:#667eea; color:#fff; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:bold;">' + healeId + '</span>';
             html += '</div>';
             html += '<div style="font-size:14px; color:#555; margin-bottom:8px;"><span>📞 ' + pt.phone + '</span> &nbsp;|&nbsp; <span>🆔 ' + pt.aadhar + '</span> &nbsp;|&nbsp; ' + status + '</div>';
-            
-            // DATE OF VISIT AND NEXT VISIT DISPLAY
             html += '<div style="margin:8px 0; padding:8px; background:#f0f9ff; border-radius:6px; font-size:13px; color:#1e40af; border-left:3px solid #3b82f6;">';
             html += '<strong>📅 Date of Visit:</strong> ' + fmtDate(pt.visitDate) + '<br>';
             html += '<strong>📅 Next Visit:</strong> ' + fmtDate(pt.nextVisitDate) + '<br>';
             html += '<strong>⏰ Time:</strong> 5:00AM TO 7:00AM</div>';
-            
             html += '<div style="display:flex; gap:8px; margin-top:10px;">';
             html += '<a href="sms:' + pt.phone + '?body=' + encodedMsg + '" style="flex:1; text-align:center; padding:10px; background:#3b82f6; color:#fff; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;">💬 SMS</a>';
             html += '<a href="https://wa.me/91' + pt.phone + '?text=' + encodedMsg + '" target="_blank" style="flex:1; text-align:center; padding:10px; background:#10b981; color:#fff; border-radius:6px; text-decoration:none; font-weight:bold; font-size:14px;">💬 WhatsApp</a>';
@@ -198,25 +165,13 @@ function filterReminders(selectedDay) {
     }
 }
 
-// ORIGINAL WORKING BULK FUNCTIONS
-
-// ==========================================
-// NEW RELIABLE BULK MESSAGING SYSTEM
-// ==========================================
-window.bulkQueue = [];
-window.bulkIndex = 0;
-
-// ==========================================
-// BULLETPROOF BULK TAP-QUEUE SYSTEM
-// ==========================================
-
 // ==========================================
 // BULLETPROOF MANUAL TAP QUEUE SYSTEM
 // ==========================================
 function showBulkQueue(day, type) {
     var pts = window.reminderData[day] || [];
     if (!pts || pts.length === 0) {
-        alert('No patients found for ' + day);
+        alert('No patients found for ' + day + '. Please select a day from the dropdown first.');
         return;
     }
 
@@ -252,7 +207,7 @@ function showBulkQueue(day, type) {
 
         var patientNames = patients.map(function(p) { return p.name; }).join(' & ');
 
-        // THIS IS THE KEY: A REAL <a> TAG THAT THE USER PHYSICALLY TAPS (100% WebView safe)
+        // REAL <a> TAG THAT THE USER PHYSICALLY TAPS (100% WebView safe)
         html += '<a href="' + url + '" target="_blank" style="display:block; background:' + (type === 'whatsapp' ? '#10b981' : '#3b82f6') + '; color:white; padding:15px; border-radius:8px; text-decoration:none; font-weight:bold; text-align:center; margin-bottom:12px; font-size:16px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">';
         html += '💬 Send to: ' + patientNames + '<br><span style="font-size:14px; font-weight:normal; opacity:0.9;">' + phone + '</span>';
         html += '</a>';
