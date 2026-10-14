@@ -31,7 +31,6 @@ function loadReminders() {
     var patientData = {};
     var idToKey = {};
 
-    // STEP 1: patients
     db.transaction(function(tx) {
         tx.executeSql('SELECT * FROM patients ORDER BY id ASC', [], function(tx, res) {
             for (var i = 0; i < res.rows.length; i++) {
@@ -54,7 +53,6 @@ function loadReminders() {
         }, function(tx, e) { console.error('patients error', e); });
     }, function(e) { console.error('patients tx error', e); }, function() {
 
-        // STEP 2: latest visit date from VISITS table
         db.transaction(function(tx2) {
             tx2.executeSql('SELECT patient_id, date_time FROM visits', [], function(tx2, vres) {
                 for (var j = 0; j < vres.rows.length; j++) {
@@ -67,8 +65,6 @@ function loadReminders() {
                 }
             }, function(tx2, e) { console.error('visits error', e); });
         }, function(e) { console.error('visits tx error', e); }, function() {
-
-            // STEP 3: render
             buildReminderUI(patientData);
         });
     });
@@ -167,103 +163,22 @@ function filterReminders(selectedDay) {
     }
 }
 
-
-
-
-
-function processBulkMessages(day, type) {
-    var pts = window.reminderData[day] || [];
-    if (!pts.length) { alert('No patients for ' + day); return; }
-    
-    var typeName = type === 'whatsapp' ? 'WhatsApp' : 'SMS';
-    if (!confirm('Bulk ' + typeName + ' will open a separate message for each patient (' + pts.length + ' total).\n\nThis ensures every family member gets their correct Heale ID and details, even if they share a phone number.\n\nYou will need to press "Send" on each one manually.\n\nContinue?')) {
-        return;
-    }
-
-    var index = 0;
-    function sendNext() {
-        if (index >= pts.length) {
-            alert('✅ Bulk ' + typeName + ' process completed!');
-            return;
-        }
-        var pt = pts[index];
-        var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
-        var cleanPhone = String(pt.phone).replace(/\D/g, ''); // Remove spaces/dashes
-        var msg = getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
-        
-        if (type === 'whatsapp') {
-            window.open('https://wa.me/91' + cleanPhone + '?text=' + encodeURIComponent(msg), '_blank');
-        } else {
-            window.open('sms:' + cleanPhone + '?body=' + encodeURIComponent(msg), '_blank');
-        }
-        
-        index++;
-        setTimeout(sendNext, 2500); // 2.5 second delay to let you press Send
-    }
-    
-    sendNext();
-}
-
-function processBulkMessages(day, type) {
-    var pts = window.reminderData[day] || [];
-    if (!pts.length) { alert('No patients for ' + day); return; }
-    
-    // Group patients by phone number to handle shared family numbers
-    var grouped = {};
-    pts.forEach(function(pt) {
-        var cleanPhone = String(pt.phone).replace(/\D/g, '');
-        if (!grouped[cleanPhone]) grouped[cleanPhone] = [];
-        grouped[cleanPhone].push(pt);
-    });
-
-    var phoneNumbers = Object.keys(grouped);
-    var typeName = type === 'whatsapp' ? 'WhatsApp' : 'SMS';
-    
-    if (!confirm('Send ' + typeName + ' to ' + phoneNumbers.length + ' unique number(s)?\n\n(Family members sharing a number will receive one combined message).\n\nContinue?')) {
-        return;
-    }
-
-    var index = 0;
-    function sendNext() {
-        if (index >= phoneNumbers.length) {
-            alert('✅ Bulk ' + typeName + ' completed!');
-            return;
-        }
-        
-        var phone = phoneNumbers[index];
-        var patients = grouped[phone];
-        
-        // Combine messages for shared numbers
-        var combinedMsg = "";
-        patients.forEach(function(pt, i) {
-            var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
-            combinedMsg += getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
-            if (i < patients.length - 1) combinedMsg += "\n\n---\n\n";
-        });
-
-        var url = type === 'whatsapp' 
-            ? 'https://wa.me/91' + phone + '?text=' + encodeURIComponent(combinedMsg)
-            : 'sms:' + phone + '?body=' + encodeURIComponent(combinedMsg);
-
-        // Create and click a real link (this is exactly how your individual buttons work!)
-        var a = document.createElement('a');
-        a.href = url;
-        a.target = '_blank';
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(function() { document.body.removeChild(a); }, 1000);
-        
-        index++;
-        setTimeout(sendNext, 2500); // 2.5 second delay between numbers
-    }
-    sendNext();
-}
-
+// ORIGINAL WORKING BULK FUNCTIONS
 function sendBulkSMS(day) {
-    processBulkMessages(day, 'sms');
+    var pts = window.reminderData[day] || [];
+    if (!pts.length) { alert('No patients for ' + day); return; }
+    var firstPt = pts[0];
+    var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
+    var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
+    var phones = pts.map(function(p) { return p.phone; }).join(',');
+    window.open('sms:' + phones + '?body=' + encodeURIComponent(msg), '_blank');
 }
 
 function sendBulkWhatsApp(day) {
-    processBulkMessages(day, 'whatsapp');
+    var pts = window.reminderData[day] || [];
+    if (!pts.length) { alert('No patients for ' + day); return; }
+    var firstPt = pts[0];
+    var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
+    var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
+    window.open('https://wa.me/91' + firstPt.phone + '?text=' + encodeURIComponent(msg), '_blank');
 }
