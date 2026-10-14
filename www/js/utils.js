@@ -34,11 +34,13 @@ function formatDate(d) {
     return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); 
 }
 
-function getNextVisitDate(fromDate) { 
-    const d = new Date(fromDate); 
-    d.setDate(d.getDate() + 7); 
-    d.setHours(0,0,0,0); 
-    return d; 
+function getNextVisitDate(fromDate) {
+    const d = new Date(fromDate);
+    // Bulletproof calculation: ignores time/timezone to prevent 1-day shifts
+    // JavaScript natively and perfectly handles 30/31 day month rollovers this way
+    const nextDate = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7);
+    nextDate.setHours(0, 0, 0, 0);
+    return nextDate;
 }
 
 function toggleHistory(id) { 
