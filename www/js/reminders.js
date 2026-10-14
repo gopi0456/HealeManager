@@ -83,8 +83,9 @@ function buildReminderUI(patientData) {
         var baseDate = pd.visitDate || pd.lastDate;
         if (!baseDate) return;
 
-        var nextVisitDate = new Date(baseDate.getTime());
-        nextVisitDate.setDate(nextVisitDate.getDate() + 7);
+        // Bulletproof calculation: ignores time/timezone to prevent 1-day shifts
+        // JavaScript automatically handles 30/31 day month rollovers perfectly here
+        var nextVisitDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + 7);
 
         var daysUntilVisit = Math.floor((nextVisitDate - today) / 86400000);
         
