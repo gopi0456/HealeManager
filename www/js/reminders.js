@@ -204,71 +204,66 @@ function processBulkMessages(day, type) {
     sendNext();
 }
 
-function sendBulkSMS(day) {
-    processBulkMessages(day, 'sms');
-}
-
-function sendBulkWhatsApp(day) {
-    processBulkMessages(day, 'whatsapp');
-}
-
 function processBulkMessages(day, type) {
     var pts = window.reminderData[day] || [];
     if (!pts.length) { alert('No patients for ' + day); return; }
     
-    // Smart grouping: Combine messages for patients who share the same phone number
+    // Group patients by phone number to handle shared family numbers
     var grouped = {};
     pts.forEach(function(pt) {
-        var cleanPhone = String(pt.phone).replace(/\D/g, ''); // Remove spaces/dashes
-        if (!grouped[cleanPhone]) {
-            grouped[cleanPhone] = [];
-        }
+        var cleanPhone = String(pt.phone).replace(/\D/g, '');
+        if (!grouped[cleanPhone]) grouped[cleanPhone] = [];
         grouped[cleanPhone].push(pt);
     });
 
     var phoneNumbers = Object.keys(grouped);
     var typeName = type === 'whatsapp' ? 'WhatsApp' : 'SMS';
     
-    if (!confirm('Send ' + typeName + ' to ' + phoneNumbers.length + ' unique number(s)?\n\n(Note: Family members sharing a number will receive one combined message).\n\nContinue?')) {
+    if (!confirm('Send ' + typeName + ' to ' + phoneNumbers.length + ' unique number(s)?\n\n(Family members sharing a number will receive one combined message).\n\nContinue?')) {
         return;
     }
 
     var index = 0;
     function sendNext() {
         if (index >= phoneNumbers.length) {
-            alert('✅ Bulk ' + typeName + ' process completed!');
+            alert('✅ Bulk ' + typeName + ' completed!');
             return;
         }
         
         var phone = phoneNumbers[index];
         var patients = grouped[phone];
         
-        // Combine messages for patients sharing this number
+        // Combine messages for shared numbers
         var combinedMsg = "";
         patients.forEach(function(pt, i) {
             var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
             combinedMsg += getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
-            if (i < patients.length - 1) {
-                combinedMsg += "\n\n---\n\n"; // Separator between patients
-            }
+            if (i < patients.length - 1) combinedMsg += "\n\n---\n\n";
         });
 
         var url = type === 'whatsapp' 
             ? 'https://wa.me/91' + phone + '?text=' + encodeURIComponent(combinedMsg)
             : 'sms:' + phone + '?body=' + encodeURIComponent(combinedMsg);
 
-        // Create a temporary link and click it (bypasses WebView popup blockers)
+        // Create and click a real link (this is exactly how your individual buttons work!)
         var a = document.createElement('a');
         a.href = url;
         a.target = '_blank';
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
-
+        setTimeout(function() { document.body.removeChild(a); }, 1000);
+        
         index++;
-        setTimeout(sendNext, 2000); // 2 second delay between different numbers
+        setTimeout(sendNext, 2500); // 2.5 second delay between numbers
     }
-    
     sendNext();
+}
+
+function sendBulkSMS(day) {
+    processBulkMessages(day, 'sms');
+}
+
+function sendBulkWhatsApp(day) {
+    processBulkMessages(day, 'whatsapp');
 }
