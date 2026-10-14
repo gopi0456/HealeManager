@@ -179,7 +179,7 @@ function showBulkQueue(day, type) {
         return;
     }
 
-    if (!confirm('Start Bulk ' + (type === 'whatsapp' ? 'WhatsApp' : 'SMS') + ' for ' + pts.length + ' patients?\n\nIMPORTANT: You will see a list of buttons. Tap each one to send, then come back and tap the next.')) {
+    if (!confirm('Starting Bulk ' + (type === 'whatsapp' ? 'WhatsApp' : 'SMS') + ' for ' + pts.length + ' Heale?\n\nIMPORTANT: You will see a list of buttons. Tap each one to send, then come back and tap the next.')) {
         return;
     }
 
