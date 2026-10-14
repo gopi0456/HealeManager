@@ -168,39 +168,41 @@ function filterReminders(selectedDay) {
 }
 
 function sendBulkSMS(day) {
-    var pts = window.reminderData[day] || [];
-    if (!pts.length) { alert('No patients for ' + day); return; }
-    var firstPt = pts[0];
-    var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
-    var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
-    var phones = pts.map(function(p) { return p.phone; }).join(',');
-    window.open('sms:' + phones + '?body=' + encodeURIComponent(msg), '_blank');
+    processBulkMessages(day, 'sms');
 }
 
 function sendBulkWhatsApp(day) {
+    processBulkMessages(day, 'whatsapp');
+}
+
+function processBulkMessages(day, type) {
     var pts = window.reminderData[day] || [];
     if (!pts.length) { alert('No patients for ' + day); return; }
     
-    if (!confirm('Bulk WhatsApp will open a separate chat for each patient (' + pts.length + ' total).\n\nYou will need to press "Send" on each one manually.\n\nContinue?')) {
+    var typeName = type === 'whatsapp' ? 'WhatsApp' : 'SMS';
+    if (!confirm('Bulk ' + typeName + ' will open a separate message for each patient (' + pts.length + ' total).\n\nThis ensures every family member gets their correct Heale ID and details, even if they share a phone number.\n\nYou will need to press "Send" on each one manually.\n\nContinue?')) {
         return;
     }
 
     var index = 0;
     function sendNext() {
         if (index >= pts.length) {
-            alert('✅ Bulk WhatsApp process completed!');
+            alert('✅ Bulk ' + typeName + ' process completed!');
             return;
         }
         var pt = pts[index];
         var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
-        var cleanPhone = String(pt.phone).replace(/\D/g, ''); // Remove any non-digits (spaces, dashes)
+        var cleanPhone = String(pt.phone).replace(/\D/g, ''); // Remove spaces/dashes
         var msg = getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
-        var url = 'https://wa.me/91' + cleanPhone + '?text=' + encodeURIComponent(msg);
         
-        window.open(url, '_blank');
+        if (type === 'whatsapp') {
+            window.open('https://wa.me/91' + cleanPhone + '?text=' + encodeURIComponent(msg), '_blank');
+        } else {
+            window.open('sms:' + cleanPhone + '?body=' + encodeURIComponent(msg), '_blank');
+        }
         
         index++;
-        setTimeout(sendNext, 2500); // 2.5 second delay between each to allow you to press Send
+        setTimeout(sendNext, 2500); // 2.5 second delay to let you press Send
     }
     
     sendNext();
