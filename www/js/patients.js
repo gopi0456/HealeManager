@@ -290,7 +290,7 @@ function loadDashboard() {
             for (let i=0;i<r.rows.length;i++) { 
                 const p=r.rows.item(i), vd=parseDate(p.date_time); 
                 if(!vd) continue; 
-                if(!plv[p.phone]||vd>plv[p.phone]) plv[p.phone]=vd; 
+                const _k=(p.name||'').trim().toLowerCase()+'|'+(p.aadhar||'').trim().toLowerCase(); if(!_k.split('|')[0]&&!_k.split('|')[1]) _k=(p.phone||''); if(!plv[_k]||vd>plv[_k]) plv[_k]=vd; 
             } 
             let rc=0; 
             Object.values(plv).forEach(d=>{ rc++; }); 

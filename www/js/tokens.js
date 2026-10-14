@@ -16,11 +16,14 @@ function addToToken(dbId, name, phone, btn) {
                         return;
                     }
 
-                    tx.executeSql('SELECT MAX(token_number) as max_t FROM tokens WHERE token_date=? WHERE token_date=?',
-                        [today], function(tx, res) {
+                    tx.executeSql('SELECT MAX(max_t) as max_t FROM (SELECT MAX(token_number) as max_t FROM tokens WHERE token_date=? UNION ALL SELECT MAX(token_number) as max_t FROM visits WHERE date_time LIKE ?)',
+                        [today, today + '%'], function(tx, res) {
                             let nextTokenNum = 1;
-                            if (res.rows.length > 0 && res.rows.item(0).max_t) {
-                                nextTokenNum = res.rows.item(0).max_t + 1;
+                            if (res.rows.length > 0) {
+                                let max_t = res.rows.item(0).max_t;
+                                if (max_t !== null && max_t !== undefined) {
+                                    nextTokenNum = parseInt(max_t, 10) + 1;
+                                }
                             }
 
                             tx.executeSql('INSERT INTO tokens (patient_id, patient_name, patient_phone, token_date, created_at, token_number) VALUES (?,?,?,?,?,?)',
@@ -289,3 +292,12 @@ function closeTokenTicket() {
         modal.style.display = 'none';
     }
 }
+
+// Safely trigger cleanup when the app is ready, avoiding transaction deadlocks
+document.addEventListener('deviceready', function() {
+    setTimeout(function() {
+        if (typeof cleanupExpiredTokens === 'function') {
+            cleanupExpiredTokens();
+        }
+    }, 1000); // 1 second delay ensures no other initial transactions are blocking
+}, false);
