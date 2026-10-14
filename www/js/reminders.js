@@ -166,72 +166,57 @@ function filterReminders(selectedDay) {
 // ORIGINAL WORKING BULK FUNCTIONS
 
 function sendBulkSMS(day) {
-    processBulkMessages(day, 'sms');
+    alert("DEBUG 1: sendBulkSMS called for " + day);
+    var pts = window.reminderData[day] || [];
+    alert("DEBUG 2: Found " + pts.length + " patients for " + day);
+    
+    if (!pts.length) { 
+        alert('No patients for ' + day); 
+        return; 
+    }
+    
+    var firstPt = pts[0];
+    var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
+    
+    try {
+        var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
+        alert("DEBUG 3: Message generated successfully.");
+        
+        var phones = pts.map(function(p) { return p.phone; }).join(',');
+        alert("DEBUG 4: Opening SMS for numbers: " + phones);
+        
+        // window.location.href is much more reliable than window.open in Cordova/Capacitor
+        window.location.href = 'sms:' + phones + '?body=' + encodeURIComponent(msg);
+    } catch (e) {
+        alert("DEBUG ERROR in sendBulkSMS: " + e.message);
+        console.error(e);
+    }
 }
 
 function sendBulkWhatsApp(day) {
-    processBulkMessages(day, 'whatsapp');
-}
-
-function processBulkMessages(day, type) {
+    alert("DEBUG 1: sendBulkWhatsApp called for " + day);
     var pts = window.reminderData[day] || [];
-    if (!pts.length) { alert('No patients for ' + day); return; }
+    alert("DEBUG 2: Found " + pts.length + " patients for " + day);
     
-    // Group patients by phone number to handle shared family numbers correctly
-    var grouped = {};
-    pts.forEach(function(pt) {
-        var cleanPhone = String(pt.phone).replace(/\D/g, ''); // Remove spaces/dashes
-        if (!grouped[cleanPhone]) grouped[cleanPhone] = [];
-        grouped[cleanPhone].push(pt);
-    });
-
-    var phoneNumbers = Object.keys(grouped);
-    var typeName = type === 'whatsapp' ? 'WhatsApp' : 'SMS';
-    
-    if (!confirm('Send ' + typeName + ' to ' + phoneNumbers.length + ' unique number(s)?\n\n(Family members sharing a number will receive one combined message with all their details).\n\nContinue?')) {
-        return;
-    }
-
-    var index = 0;
-    function sendNext() {
-        if (index >= phoneNumbers.length) {
-            alert('✅ Bulk ' + typeName + ' completed!');
-            return;
-        }
-        
-        var phone = phoneNumbers[index];
-        var patients = grouped[phone];
-        
-        // Combine messages for patients sharing this number
-        var combinedMsg = "";
-        patients.forEach(function(pt, i) {
-            var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
-            combinedMsg += getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
-            if (i < patients.length - 1) {
-                combinedMsg += "\n\n---\n\n"; // Separator between patients
-            }
-        });
-
-        var url = type === 'whatsapp' 
-            ? 'https://wa.me/91' + phone + '?text=' + encodeURIComponent(combinedMsg)
-            : 'sms:' + phone + '?body=' + encodeURIComponent(combinedMsg);
-
-        // THIS IS THE FIX: Create a real link and click it, exactly like the individual buttons
-        var a = document.createElement('a');
-        a.href = url;
-        a.target = '_blank';
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        
-        // Clean up the element after a short delay
-        setTimeout(function() { 
-            if (document.body.contains(a)) document.body.removeChild(a); 
-        }, 1000);
-
-        index++;
-        setTimeout(sendNext, 2500); // 2.5 second delay to let you press Send
+    if (!pts.length) { 
+        alert('No patients for ' + day); 
+        return; 
     }
     
-    sendNext();
+    var firstPt = pts[0];
+    var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
+    
+    try {
+        var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
+        alert("DEBUG 3: Message generated successfully.");
+        
+        var cleanPhone = String(firstPt.phone).replace(/\D/g, '');
+        alert("DEBUG 4: Opening WhatsApp for: " + cleanPhone);
+        
+        // window.location.href is much more reliable than window.open in Cordova/Capacitor
+        window.location.href = 'https://wa.me/91' + cleanPhone + '?text=' + encodeURIComponent(msg);
+    } catch (e) {
+        alert("DEBUG ERROR in sendBulkWhatsApp: " + e.message);
+        console.error(e);
+    }
 }
