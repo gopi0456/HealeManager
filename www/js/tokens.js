@@ -16,22 +16,70 @@ function addToToken(dbId, name, phone, btn) {
                         return;
                     }
 
-                    tx.executeSql('SELECT MAX(token_number) as max_t FROM tokens WHERE token_date=?', [today], function(tx, res1) {
+                    // Step 1: Get max from tokens table
+                    tx.executeSql('SELECT MAX(token_number) as max_t FROM tokens WHERE token_date=?',
+                        [today], function(tx, res1) {
                             let maxFromTokens = 0;
                             if (res1.rows.length > 0 && res1.rows.item(0).max_t !== null) {
                                 maxFromTokens = parseInt(res1.rows.item(0).max_t, 10);
                             }
                             
-                            tx.executeSql('SELECT MAX(token_number) as max_t FROM visits WHERE date_time LIKE ?', [today + '%'], function(tx, res2) {
-                                let maxFromVisits = 0;
-                                if (res2.rows.length > 0 && res2.rows.item(0).max_t !== null) {
-                                    maxFromVisits = parseInt(res2.rows.item(0).max_t, 10);
-                                }
-                                
-                                let nextTokenNum = Math.max(maxFromTokens, maxFromVisits) + 1;
-                                console.log('🔍 Token Debug - From tokens:', maxFromTokens, '| From visits:', maxFromVisits, '| Next:', nextTokenNum);
-    });
+                            // Step 2: Get max from visits table
+                            tx.executeSql('SELECT MAX(token_number) as max_t FROM visits WHERE date_time LIKE ?',
+                                [today + '%'], function(tx, res2) {
+                                    let maxFromVisits = 0;
+                                    if (res2.rows.length > 0 && res2.rows.item(0).max_t !== null) {
+                                        maxFromVisits = parseInt(res2.rows.item(0).max_t, 10);
+                                    }
+                                    
+                                    // Step 3: Use the maximum of both
+                                    let nextTokenNum = Math.max(maxFromTokens, maxFromVisits) + 1;
+                                    console.log('🔍 Token Debug - From tokens:', maxFromTokens, '| From visits:', maxFromVisits, '| Next:', nextTokenNum);
+
+                                    // Step 4: Insert the new token
+                                    tx.executeSql('INSERT INTO tokens (patient_id, patient_name, patient_phone, token_date, created_at, token_number) VALUES (?,?,?,?,?,?)',
+                                        [dbId, name, phone, today, currentTime, nextTokenNum],
+                                        function() {
+                                            window.currentTicket = {
+                                                tokenNum: '#' + nextTokenNum,
+                                                name: name,
+                                                id: fullHeliId,
+                                                phone: phone,
+                                                date: currentTime,
+                                                notes: 'Pending visit...'
+                                            };
+
+                                            document.getElementById('ticketTokenNum').textContent = '#' + nextTokenNum;
+                                            document.getElementById('ticketName').textContent = name;
+                                            document.getElementById('ticketId').textContent = fullHeliId;
+                                            document.getElementById('ticketPhone').textContent = phone;
+                                            document.getElementById('ticketDate').textContent = currentTime;
+                                            document.getElementById('ticketNotes').textContent = 'Pending visit...';
+
+                                            const modal = document.getElementById('tokenTicketModal');
+                                            if (modal) {
+                                                modal.classList.add('active');
+                                                modal.style.display = 'flex';
+                                            }
+
+                                            if (btn) {
+                                                btn.textContent = '✓ Token #' + nextTokenNum;
+                                                btn.classList.add('added');
+                                            }
+                                            if (typeof loadTodayTokens === 'function') loadTodayTokens();
+                                        },
+                                        function(err) { alert("❌ DB Error: " + err.message); }
+                                    );
+                                });
+                        });
+                });
+        });
+    } catch (e) {
+        console.error("❌ addToToken error:", e);
+        alert("Error adding token: " + e.message);
+    }
 }
+
 
 function loadTodayTokens() {
     try {
