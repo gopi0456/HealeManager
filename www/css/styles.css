@@ -1,48 +1,57 @@
 /* ==========================================
-   ORIGINAL LAYOUT WITH MODERN LIGHT/DARK MODE
+   PERFECT MOBILE UI - EXACT MATCH TO SHARED LINKS
    ========================================== */
 
-/* 1. THEME VARIABLES (Keeps original colors but adds Dark Mode) */
+/* 1. EXACT COLORS FROM YOUR SHARED INDEX.HTML */
 :root {
-    --bg-primary: #f3f4f6;
+    --bg-primary: #f8fafc;
     --bg-secondary: #ffffff;
-    --text-primary: #1f2937;
-    --text-secondary: #6b7280;
-    --border-color: #e5e7eb;
-    --accent-color: #2563eb;
-    --accent-light: #dbeafe;
-    --success-color: #059669;
-    --warning-color: #d97706;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --accent-color: #3b82f6;
+    --accent-hover: #2563eb;
+    --border-color: #cbd5e1;
+    --shadow-color: rgba(0, 0, 0, 0.05);
+    --success-color: #10b981;
     --danger-color: #ef4444;
-    --purple-color: #7c3aed;
-    --card-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    --purple-color: #8b5cf6;
 }
 
+/* 2. BEAUTIFUL DARK MODE */
 [data-theme="dark"] {
-    --bg-primary: #111827;
-    --bg-secondary: #1f2937;
-    --text-primary: #f9fafb;
-    --text-secondary: #9ca3af;
-    --border-color: #374151;
-    --accent-color: #3b82f6;
-    --accent-light: #1e3a8a;
-    --success-color: #10b981;
-    --warning-color: #f59e0b;
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --accent-color: #60a5fa;
+    --accent-hover: #3b82f6;
+    --border-color: #334155;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --success-color: #34d399;
     --danger-color: #f87171;
     --purple-color: #a78bfa;
-    --card-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
 
-/* 2. ORIGINAL LAYOUT RULES (Unchanged arrangement) */
-body {
+/* 3. GLOBAL RESET & MOBILE FIT */
+* {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    transition: background-color 0.3s, color 0.3s;
+    -webkit-tap-highlight-color: transparent;
 }
 
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.5;
+    transition: background-color 0.3s, color 0.3s;
+    overflow-x: hidden;
+}
+
+h1, h2, h3 { color: var(--text-primary); font-weight: 700; }
+
+/* 4. LOGIN PAGE */
 .login-container {
     display: flex;
     justify-content: center;
@@ -54,149 +63,92 @@ body {
 
 .login-box {
     background: var(--bg-secondary);
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    padding: 30px 25px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     width: 100%;
-    max-width: 400px;
-    transition: background-color 0.3s;
+    max-width: 380px;
 }
 
 .login-box h1 {
     text-align: center;
-    margin-bottom: 30px;
-    color: var(--text-primary);
-    font-size: 22px;
+    font-size: 20px;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
-.input-with-icon {
-    position: relative;
-    margin-bottom: 20px;
-}
+/* 5. INPUTS & BUTTONS */
+.input-with-icon { position: relative; margin-bottom: 15px; }
+.input-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 18px; }
 
-.input-icon {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 18px;
-}
-
-input[type="text"],
-input[type="password"],
-input[type="number"],
-input[type="tel"],
-textarea,
-select {
+input[type="text"], input[type="password"], input[type="number"], input[type="tel"], textarea, select {
     width: 100%;
-    padding: 12px 12px 12px 45px;
+    padding: 14px 14px 14px 45px;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 10px;
     background-color: var(--bg-secondary);
     color: var(--text-primary);
     font-size: 16px;
-    box-sizing: border-box;
-    transition: border-color 0.2s, background-color 0.3s;
-}
-
-input:focus, textarea:focus, select:focus {
     outline: none;
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px var(--accent-light);
+    transition: border-color 0.2s;
 }
 
-textarea {
-    padding-left: 12px;
-    min-height: 100px;
-}
+textarea { padding-left: 14px; min-height: 100px; }
+input:focus, textarea:focus, select:focus { border-color: var(--accent-color); }
 
-button {
+button, .btn {
     width: 100%;
     padding: 14px;
     background: var(--accent-color);
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
+    transition: background 0.2s;
 }
+button:active { transform: scale(0.98); }
 
-button:active {
-    transform: scale(0.98);
-}
-
-.dashboard-container, .menu-container, .page {
+/* 6. PAGE LAYOUTS */
+.page, .dashboard-container, .menu-container {
     display: none;
     padding: 20px;
-    padding-top: 70px;
-    max-width: 800px;
+    padding-top: 80px;
+    max-width: 600px;
     margin: 0 auto;
 }
+.page.active, .dashboard-container.active, .menu-container.active { display: block; }
 
-.dashboard-container.active, .menu-container.active, .page.active {
-    display: block;
-}
-
-/* Dashboard Grid - Original Arrangement */
-.dashboard-grid {
+/* 7. DASHBOARD & MENU GRIDS (STRICTLY 2 COLUMNS FOR MOBILE) */
+.dashboard-grid, .menu-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 15px;
-    margin-bottom: 20px;
+    grid-template-columns: 1fr 1fr !important; /* Forces side-by-side on all screens */
+    gap: 12px;
+    margin-top: 15px;
 }
 
-.stat-card {
-    background: var(--bg-secondary);
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: var(--card-shadow);
-    text-align: center;
-    transition: background-color 0.3s, transform 0.2s;
-}
-
-.stat-card:hover {
-    transform: translateY(-2px);
-}
-
-.stat-icon { font-size: 28px; margin-bottom: 8px; }
-.stat-number { font-size: 24px; font-weight: 700; color: var(--accent-color); margin-bottom: 4px; }
-.stat-label { font-size: 13px; color: var(--text-secondary); }
-
-.dashboard-menu-btn {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    margin-top: 10px;
-}
-
-/* Menu Grid - Original Arrangement */
-.menu-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    margin-top: 20px;
-}
-
-.menu-btn {
+.stat-card, .menu-btn {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 20px;
+    padding: 16px 10px;
     text-align: center;
+    box-shadow: 0 2px 4px var(--shadow-color);
     cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: var(--card-shadow);
+    transition: transform 0.2s;
 }
+.stat-card:active, .menu-btn:active { transform: scale(0.97); }
 
-.menu-btn:active {
-    transform: scale(0.97);
-    background: var(--accent-light);
-}
+.stat-icon { font-size: 28px; margin-bottom: 5px; }
+.stat-number { font-size: 22px; font-weight: 800; color: var(--accent-color); margin-bottom: 2px; }
+.stat-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
 
-.menu-btn .icon { font-size: 32px; margin-bottom: 10px; }
-.menu-btn h2 { font-size: 16px; margin: 0; color: var(--text-primary); }
+.menu-btn .icon { font-size: 32px; margin-bottom: 8px; }
+.menu-btn h2 { font-size: 15px; margin: 0; color: var(--text-primary); }
 
 .menu-back-btn {
     background: transparent;
@@ -206,80 +158,32 @@ button:active {
     padding: 8px 16px;
     font-size: 14px;
     margin-bottom: 15px;
+    display: inline-block;
 }
 
-/* Cards - Original Arrangement */
+/* 8. CARDS (Patients, Tokens, Reminders) */
 .card, .patient-card, .token-card {
     background: var(--bg-secondary);
     padding: 16px;
     margin-bottom: 12px;
-    border-radius: 10px;
-    box-shadow: var(--card-shadow);
-    transition: background-color 0.3s;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+    border: 1px solid var(--border-color);
 }
-
 .patient-card { border-left: 4px solid var(--accent-color); }
 .token-card { border-left: 4px solid var(--purple-color); }
 
-.patient-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.patient-name { font-size: 18px; font-weight: 700; color: var(--text-primary); }
-
-.heale-id-badge {
-    background: var(--accent-light);
-    color: var(--accent-color);
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 700;
-}
-
-.patient-details {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
-}
-
-.patient-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 12px;
-}
-
-.btn-token, .btn-view, .btn-save-visit {
-    flex: 1;
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.btn-token { background: var(--accent-color); color: white; }
-.btn-view { background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); }
-
-/* Reminders - Original Arrangement */
 .reminder-day-column {
-    flex: 1;
-    min-width: 280px;
     background: var(--bg-secondary);
     border-radius: 12px;
-    box-shadow: var(--card-shadow);
+    box-shadow: 0 2px 4px var(--shadow-color);
+    border: 1px solid var(--border-color);
     overflow: hidden;
-    margin-bottom: 20px;
-    transition: background-color 0.3s;
+    margin-bottom: 15px;
 }
-
 .reminder-day-header {
     background: var(--bg-primary);
-    padding: 15px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--border-color);
     font-weight: 700;
     color: var(--text-primary);
@@ -288,47 +192,7 @@ button:active {
     align-items: center;
 }
 
-/* Modals - Original Arrangement */
-.modal {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6);
-    z-index: 10000;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
-
-.modal.active { display: flex; }
-
-.modal-box {
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    width: 100%;
-    max-width: 400px;
-    max-height: 90vh;
-    overflow-y: auto;
-    transition: background-color 0.3s;
-}
-
-/* Utilities */
-.empty-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--text-secondary);
-}
-.empty-state .icon { font-size: 48px; margin-bottom: 15px; opacity: 0.5; }
-
-.error-msg {
-    color: var(--danger-color);
-    font-size: 14px;
-    margin-bottom: 15px;
-    text-align: center;
-}
-
-/* Theme Toggle Button */
+/* 9. THEME TOGGLE BUTTON */
 .theme-fab {
     position: fixed;
     bottom: 20px;
@@ -339,13 +203,16 @@ button:active {
     background: var(--bg-secondary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    box-shadow: var(--card-shadow);
+    box-shadow: 0 4px 10px var(--shadow-color);
     font-size: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 9999;
-    transition: all 0.3s;
 }
 .theme-fab:active { transform: scale(0.9); }
+
+/* 10. UTILITIES */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+.error-msg { color: var(--danger-color); font-size: 14px; margin-bottom: 15px; text-align: center; }
