@@ -166,28 +166,33 @@ function filterReminders(selectedDay) {
 // ORIGINAL WORKING BULK FUNCTIONS
 
 
+
 function sendBulkSMS(day) {
     var pts = window.reminderData[day] || [];
-    if (!pts.length) { alert('No patients for ' + day); return; }
-    
+    if (!pts || pts.length === 0) {
+        alert('DEBUG: No patients found for ' + day);
+        return;
+    }
     var firstPt = pts[0];
     var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
     var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
     var phones = pts.map(function(p) { return p.phone; }).join(',');
     
-    // Direct redirect, exactly like standard web behavior
+    // Direct redirect
     window.location.href = 'sms:' + phones + '?body=' + encodeURIComponent(msg);
 }
 
 function sendBulkWhatsApp(day) {
     var pts = window.reminderData[day] || [];
-    if (!pts.length) { alert('No patients for ' + day); return; }
-    
+    if (!pts || pts.length === 0) {
+        alert('DEBUG: No patients found for ' + day);
+        return;
+    }
     var firstPt = pts[0];
     var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
     var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
     var cleanPhone = String(firstPt.phone).replace(/\D/g, '');
     
-    // Direct redirect, exactly like standard web behavior
+    // Direct redirect
     window.location.href = 'https://wa.me/91' + cleanPhone + '?text=' + encodeURIComponent(msg);
 }
