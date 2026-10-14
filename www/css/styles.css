@@ -1,123 +1,85 @@
 /* ==========================================
-   MODERN UI DESIGN SYSTEM - CLAKSHMI ACUPUNCTURE
+   ORIGINAL LAYOUT WITH MODERN LIGHT/DARK MODE
    ========================================== */
 
-/* 1. MODERN CSS VARIABLES (Light & Dark Mode) */
+/* 1. THEME VARIABLES (Keeps original colors but adds Dark Mode) */
 :root {
-    --bg-primary: #f8fafc;
+    --bg-primary: #f3f4f6;
     --bg-secondary: #ffffff;
-    --bg-tertiary: #f1f5f9;
-    --text-primary: #0f172a;
-    --text-secondary: #64748b;
-    --text-muted: #94a3b8;
-    --accent-color: #3b82f6;
-    --accent-hover: #2563eb;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+    --accent-color: #2563eb;
     --accent-light: #dbeafe;
-    --success-color: #10b981;
-    --success-hover: #059669;
-    --warning-color: #f59e0b;
+    --success-color: #059669;
+    --warning-color: #d97706;
     --danger-color: #ef4444;
-    --danger-hover: #dc2626;
-    --purple-color: #8b5cf6;
-    --border-color: #e2e8f0;
-    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-    --modal-overlay: rgba(15, 23, 42, 0.6);
-    --input-bg: #ffffff;
-    --transition-speed: 0.3s;
+    --purple-color: #7c3aed;
+    --card-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 [data-theme="dark"] {
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-tertiary: #334155;
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --text-muted: #94a3b8;
-    --accent-color: #60a5fa;
-    --accent-hover: #3b82f6;
+    --bg-primary: #111827;
+    --bg-secondary: #1f2937;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
+    --accent-color: #3b82f6;
     --accent-light: #1e3a8a;
-    --success-color: #34d399;
-    --success-hover: #10b981;
-    --warning-color: #fbbf24;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
     --danger-color: #f87171;
-    --danger-hover: #ef4444;
     --purple-color: #a78bfa;
-    --border-color: #334155;
-    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-    --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-    --modal-overlay: rgba(0, 0, 0, 0.8);
-    --input-bg: #0f172a;
+    --card-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
 
-/* 2. GLOBAL RESET & TYPOGRAPHY */
-* {
-    box-sizing: border-box;
+/* 2. ORIGINAL LAYOUT RULES (Unchanged arrangement) */
+body {
     margin: 0;
     padding: 0;
-    -webkit-tap-highlight-color: transparent;
-}
-
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    line-height: 1.6;
-    transition: background-color var(--transition-speed), color var(--transition-speed);
-    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s, color 0.3s;
 }
 
-h1, h2, h3, h4 {
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 0.5em;
-}
-
-/* 3. LOGIN PAGE */
 .login-container {
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     padding: 20px;
-    background: linear-gradient(135deg, var(--accent-color) 0%, var(--purple-color) 100%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .login-box {
     background: var(--bg-secondary);
-    padding: 40px 30px;
-    border-radius: 20px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
     width: 100%;
     max-width: 400px;
-    text-align: center;
-    transition: background-color var(--transition-speed);
+    transition: background-color 0.3s;
 }
 
 .login-box h1 {
-    font-size: 22px;
+    text-align: center;
     margin-bottom: 30px;
     color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+    font-size: 22px;
 }
 
-/* 4. MODERN INPUT FIELDS */
 .input-with-icon {
     position: relative;
     margin-bottom: 20px;
-    text-align: left;
 }
 
 .input-icon {
     position: absolute;
-    left: 16px;
+    left: 15px;
     top: 50%;
     transform: translateY(-50%);
     font-size: 18px;
-    opacity: 0.7;
 }
 
 input[type="text"],
@@ -127,212 +89,114 @@ input[type="tel"],
 textarea,
 select {
     width: 100%;
-    padding: 14px 16px 14px 48px;
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
-    background-color: var(--input-bg);
+    padding: 12px 12px 12px 45px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-secondary);
     color: var(--text-primary);
     font-size: 16px;
-    transition: all 0.2s ease;
-    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s, background-color 0.3s;
 }
 
 input:focus, textarea:focus, select:focus {
+    outline: none;
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 4px var(--accent-light);
+    box-shadow: 0 0 0 3px var(--accent-light);
 }
 
 textarea {
-    padding-left: 16px;
+    padding-left: 12px;
     min-height: 100px;
-    resize: vertical;
 }
 
-/* 5. MODERN BUTTONS */
-button, .btn {
+button {
     width: 100%;
-    padding: 14px 20px;
+    padding: 14px;
+    background: var(--accent-color);
+    color: white;
     border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    transition: background-color 0.2s, transform 0.1s;
 }
 
 button:active {
     transform: scale(0.98);
 }
 
-.login-box button {
-    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
-    color: white;
-    margin-top: 10px;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.login-box button:hover {
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
-    transform: translateY(-1px);
-}
-
-/* 6. PAGE LAYOUTS */
-.page, .dashboard-container, .menu-container {
+.dashboard-container, .menu-container, .page {
     display: none;
     padding: 20px;
-    padding-top: 80px;
+    padding-top: 70px;
     max-width: 800px;
     margin: 0 auto;
-    animation: fadeIn 0.3s ease;
 }
 
-.page.active, .dashboard-container.active, .menu-container.active {
+.dashboard-container.active, .menu-container.active, .page.active {
     display: block;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* 7. HEADER & THEME TOGGLE */
-.header-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 70px;
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    z-index: 1000;
-    box-shadow: var(--card-shadow);
-    transition: background-color var(--transition-speed);
-}
-
-.header-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.theme-fab {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--card-shadow-hover);
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 999;
-    transition: all 0.3s ease;
-}
-
-.theme-fab:hover {
-    transform: scale(1.1) rotate(15deg);
-}
-
-/* 8. DASHBOARD GRID */
+/* Dashboard Grid - Original Arrangement */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
 }
 
 .stat-card {
     background: var(--bg-secondary);
     padding: 20px;
-    border-radius: 16px;
+    border-radius: 10px;
     box-shadow: var(--card-shadow);
     text-align: center;
-    transition: all 0.3s ease;
-    border: 1px solid var(--border-color);
+    transition: background-color 0.3s, transform 0.2s;
 }
 
 .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-2px);
 }
 
-.stat-icon {
-    font-size: 32px;
-    margin-bottom: 8px;
-}
-
-.stat-number {
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--accent-color);
-    margin-bottom: 4px;
-}
-
-.stat-label {
-    font-size: 13px;
-    color: var(--text-secondary);
-    font-weight: 500;
-}
+.stat-icon { font-size: 28px; margin-bottom: 8px; }
+.stat-number { font-size: 24px; font-weight: 700; color: var(--accent-color); margin-bottom: 4px; }
+.stat-label { font-size: 13px; color: var(--text-secondary); }
 
 .dashboard-menu-btn {
-    background: var(--bg-tertiary);
+    background: var(--bg-secondary);
     color: var(--text-primary);
     border: 1px solid var(--border-color);
     margin-top: 10px;
 }
 
-/* 9. MENU GRID */
+/* Menu Grid - Original Arrangement */
 .menu-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    gap: 15px;
     margin-top: 20px;
 }
 
 .menu-btn {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 24px 16px;
+    border-radius: 12px;
+    padding: 20px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s;
     box-shadow: var(--card-shadow);
 }
 
-.menu-btn:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--card-shadow-hover);
-    border-color: var(--accent-color);
+.menu-btn:active {
+    transform: scale(0.97);
+    background: var(--accent-light);
 }
 
-.menu-btn .icon {
-    font-size: 36px;
-    margin-bottom: 12px;
-}
-
-.menu-btn h2 {
-    font-size: 16px;
-    margin: 0;
-    color: var(--text-primary);
-}
+.menu-btn .icon { font-size: 32px; margin-bottom: 10px; }
+.menu-btn h2 { font-size: 16px; margin: 0; color: var(--text-primary); }
 
 .menu-back-btn {
     background: transparent;
@@ -341,50 +205,36 @@ button:active {
     width: auto;
     padding: 8px 16px;
     font-size: 14px;
-    margin-bottom: 16px;
+    margin-bottom: 15px;
 }
 
-/* 10. CARDS (Patients, Tokens, Reminders) */
-.patient-card, .token-card, .card {
+/* Cards - Original Arrangement */
+.card, .patient-card, .token-card {
     background: var(--bg-secondary);
-    padding: 18px;
-    margin-bottom: 16px;
-    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border-radius: 10px;
     box-shadow: var(--card-shadow);
-    border: 1px solid var(--border-color);
-    transition: all 0.2s ease;
+    transition: background-color 0.3s;
 }
 
-.patient-card {
-    border-left: 4px solid var(--accent-color);
-}
-
-.token-card {
-    border-left: 4px solid var(--purple-color);
-}
-
-.patient-card:hover, .token-card:hover {
-    box-shadow: var(--card-shadow-hover);
-}
+.patient-card { border-left: 4px solid var(--accent-color); }
+.token-card { border-left: 4px solid var(--purple-color); }
 
 .patient-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
-.patient-name {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-primary);
-}
+.patient-name { font-size: 18px; font-weight: 700; color: var(--text-primary); }
 
 .heale-id-badge {
     background: var(--accent-light);
     color: var(--accent-color);
     padding: 4px 10px;
-    border-radius: 20px;
+    border-radius: 12px;
     font-size: 12px;
     font-weight: 700;
 }
@@ -392,7 +242,7 @@ button:active {
 .patient-details {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 15px;
     font-size: 14px;
     color: var(--text-secondary);
     margin-bottom: 12px;
@@ -401,108 +251,101 @@ button:active {
 .patient-actions {
     display: flex;
     gap: 10px;
-    margin-top: 16px;
+    margin-top: 12px;
 }
 
 .btn-token, .btn-view, .btn-save-visit {
     flex: 1;
     padding: 10px;
-    border-radius: 10px;
+    border-radius: 8px;
     font-size: 14px;
     font-weight: 600;
 }
 
-.btn-token {
-    background: var(--accent-color);
-    color: white;
-}
+.btn-token { background: var(--accent-color); color: white; }
+.btn-view { background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); }
 
-.btn-view {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-}
-
-/* 11. REMINDER SPECIFIC */
+/* Reminders - Original Arrangement */
 .reminder-day-column {
+    flex: 1;
+    min-width: 280px;
     background: var(--bg-secondary);
-    border-radius: 16px;
+    border-radius: 12px;
     box-shadow: var(--card-shadow);
-    border: 1px solid var(--border-color);
     overflow: hidden;
     margin-bottom: 20px;
+    transition: background-color 0.3s;
 }
 
 .reminder-day-header {
-    background: var(--bg-tertiary);
-    padding: 16px;
+    background: var(--bg-primary);
+    padding: 15px;
     border-bottom: 1px solid var(--border-color);
     font-weight: 700;
     color: var(--text-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-/* 12. MODALS */
+/* Modals - Original Arrangement */
 .modal {
     display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--modal-overlay);
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
     z-index: 10000;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    backdrop-filter: blur(4px);
 }
 
-.modal.active {
-    display: flex;
-    animation: fadeIn 0.2s ease;
-}
+.modal.active { display: flex; }
 
 .modal-box {
     background: var(--bg-secondary);
-    border-radius: 20px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     width: 100%;
     max-width: 400px;
     max-height: 90vh;
     overflow-y: auto;
-    border: 1px solid var(--border-color);
+    transition: background-color 0.3s;
 }
 
-/* 13. UTILITY & EMPTY STATES */
+/* Utilities */
 .empty-state {
     text-align: center;
     padding: 40px 20px;
     color: var(--text-secondary);
 }
-
-.empty-state .icon {
-    font-size: 48px;
-    margin-bottom: 16px;
-    opacity: 0.5;
-}
+.empty-state .icon { font-size: 48px; margin-bottom: 15px; opacity: 0.5; }
 
 .error-msg {
     color: var(--danger-color);
     font-size: 14px;
-    margin-bottom: 16px;
+    margin-bottom: 15px;
     text-align: center;
-    font-weight: 500;
 }
 
-/* 14. RESPONSIVE */
-@media (max-width: 480px) {
-    .dashboard-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    .menu-grid {
-        grid-template-columns: 1fr;
-    }
-    .patient-actions {
-        flex-direction: column;
-    }
+/* Theme Toggle Button */
+.theme-fab {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 9999;
+    transition: all 0.3s;
 }
+.theme-fab:active { transform: scale(0.9); }
