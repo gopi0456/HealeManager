@@ -171,122 +171,128 @@ function filterReminders(selectedDay) {
 
 
 // Helper function to process the sequence
-async function processBulkSequence(day) {
-    var pts = window.reminderData[day] || [];
-    if (!pts || pts.length === 0) {
-        alert('No patients found for ' + day);
+async 
+// Global variable to track current bulk message
+window.bulkQueue = [];
+window.bulkIndex = 0;
+
+function showBulkModal() {
+    if (window.bulkIndex >= window.bulkQueue.length) {
+        // All done
+        var modal = document.getElementById('bulkModal');
+        if (modal) modal.style.display = 'none';
+        alert('✅ All messages sent!');
         return;
     }
 
-    // Group by phone number so family members sharing a number get ONE combined message
-    var grouped = {};
-    pts.forEach(function(pt) {
-        var cleanPhone = String(pt.phone).replace(/\D/g, '');
-        if (!grouped[cleanPhone]) grouped[cleanPhone] = [];
-        grouped[cleanPhone].push(pt);
-    });
-
-    var phoneNumbers = Object.keys(grouped);
-    var total = phoneNumbers.length;
-
-    if (!confirm('Automated Bulk Send:\n\nThis will open the share sheet for ' + total + ' unique number(s) one by one.\n\nAfter you send each message, the next one will appear automatically.\n\nStart?')) {
-        return;
+    var current = window.bulkQueue[window.bulkIndex];
+    var progress = (window.bulkIndex + 1) + ' / ' + window.bulkQueue.length;
+    
+    var modal = document.getElementById('bulkModal');
+    if (!modal) {
+        // Create modal if it doesn't exist
+        modal = document.createElement('div');
+        modal.id = 'bulkModal';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
+        document.body.appendChild(modal);
     }
 
-    for (var i = 0; i < phoneNumbers.length; i++) {
-        var phone = phoneNumbers[i];
-        var patients = grouped[phone];
-        
-        // Combine messages for shared numbers
-        var combinedMsg = "";
-        patients.forEach(function(pt, j) {
-            var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
-            combinedMsg += getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
-            if (j < patients.length - 1) combinedMsg += "\n\n---\n\n";
-        });
+    modal.innerHTML = '<div style="background:white; border-radius:12px; padding:20px; max-width:400px; width:100%; max-height:80vh; overflow-y:auto;">' +
+        '<h3 style="margin-top:0; color:#3b82f6;">Bulk Message ' + progress + '</h3>' +
+        '<div style="background:#f0f9ff; padding:12px; border-radius:8px; margin-bottom:15px;">' +
+        '<strong>Patient:</strong> ' + current.name + '<br>' +
+        '<strong>Heale ID:</strong> ' + current.healeId + '<br>' +
+        '<strong>Phone:</strong> ' + current.phone + '<br>' +
+        '<strong>Next Visit:</strong> ' + fmtDate(current.nextVisitDate) + ' (' + current.day + ')' +
+        '</div>' +
+        '<div style="background:#f8fafc; padding:12px; border-radius:8px; margin-bottom:15px; font-size:13px; white-space:pre-wrap;">' + current.message + '</div>' +
+        '<div style="display:flex; gap:10px;">' +
+        '<button onclick="sendCurrentBulk(&apos;whatsapp&apos;)" style="flex:1; padding:12px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">💬 WhatsApp</button>' +
+        '<button onclick="sendCurrentBulk(&apos;sms&apos;)" style="flex:1; padding:12px; background:#3b82f6; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">💬 SMS</button>' +
+        '</div>' +
+        '<button onclick="skipCurrentBulk()" style="width:100%; margin-top:10px; padding:10px; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer;">Skip</button>' +
+        '<button onclick="closeBulkModal()" style="width:100%; margin-top:8px; padding:10px; background:#ef4444; color:white; border:none; border-radius:6px; cursor:pointer;">Cancel All</button>' +
+        '</div>';
 
-        var progress = (i + 1) + ' / ' + total;
-        console.log('Sending bulk message ' + progress + ' to ' + phone);
-
-        try {
-            // Use Capacitor Share plugin (opens native Android share sheet)
-            await Capacitor.Plugins.Share.share({
-                title: 'Patient Reminder',
-                text: combinedMsg
-            });
-            
-            // Wait 1.5 seconds after the share sheet closes before showing the next one
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-        } catch (e) {
-            console.log('Share cancelled or failed for ' + phone + ':', e);
-            // Continue to the next one even if this one was cancelled
-        }
-    }
-
-    alert('✅ Bulk messaging sequence completed!');
+    modal.style.display = 'flex';
 }
 
+function sendCurrentBulk(type) {
+    var current = window.bulkQueue[window.bulkIndex];
+    var cleanPhone = String(current.phone).replace(/\D/g, '');
+    var encodedMsg = encodeURIComponent(current.message);
+    
+    var url = type === 'whatsapp' 
+        ? 'https://wa.me/91' + cleanPhone + '?text=' + encodedMsg
+        : 'sms:' + cleanPhone + '?body=' + encodedMsg;
+    
+    // Direct user click trigger - guaranteed to work
+    var a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    // Move to next after a delay
+    setTimeout(function() {
+        window.bulkIndex++;
+        showBulkModal();
+    }, 2000);
+}
 
-async function processBulkSequence(day) {
-    var pts = window.reminderData[day] || [];
-    if (!pts || pts.length === 0) {
-        alert('No patients found for ' + day);
-        return;
-    }
+function skipCurrentBulk() {
+    window.bulkIndex++;
+    showBulkModal();
+}
 
-    // Group by phone number so family members sharing a number get ONE combined message
-    var grouped = {};
-    pts.forEach(function(pt) {
-        var cleanPhone = String(pt.phone).replace(/\D/g, '');
-        if (!grouped[cleanPhone]) grouped[cleanPhone] = [];
-        grouped[cleanPhone].push(pt);
-    });
-
-    var phoneNumbers = Object.keys(grouped);
-    var total = phoneNumbers.length;
-
-    if (!confirm('Automated Bulk Send:\n\nThis will open the native share sheet for ' + total + ' unique number(s) one by one.\n\nAfter you send each message, the next one will appear automatically.\n\nStart?')) {
-        return;
-    }
-
-    for (var i = 0; i < phoneNumbers.length; i++) {
-        var phone = phoneNumbers[i];
-        var patients = grouped[phone];
-        
-        // Combine messages for shared numbers
-        var combinedMsg = "";
-        patients.forEach(function(pt, j) {
-            var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
-            combinedMsg += getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
-            if (j < patients.length - 1) combinedMsg += "\n\n---\n\n";
-        });
-
-        console.log('Sending bulk message ' + (i + 1) + '/' + total + ' to ' + phone);
-
-        try {
-            // Use Capacitor Share plugin (opens native Android share sheet)
-            await Capacitor.Plugins.Share.share({
-                title: 'Patient Reminder',
-                text: combinedMsg
-            });
-            
-            // Wait 1 second after the share sheet closes before showing the next one
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-        } catch (e) {
-            console.log('Share cancelled or failed for ' + phone + ':', e);
-            // Continue to the next one even if this one was cancelled
-        }
-    }
-
-    alert('✅ Bulk messaging sequence completed!');
+function closeBulkModal() {
+    var modal = document.getElementById('bulkModal');
+    if (modal) modal.style.display = 'none';
+    window.bulkQueue = [];
+    window.bulkIndex = 0;
 }
 
 function sendBulkSMS(day) {
-    processBulkSequence(day);
+    var pts = window.reminderData[day] || [];
+    if (!pts || pts.length === 0) {
+        alert('No patients found for ' + day);
+        return;
+    }
+
+    // Group by phone number
+    var grouped = {};
+    pts.forEach(function(pt) {
+        var cleanPhone = String(pt.phone).replace(/\D/g, '');
+        if (!grouped[cleanPhone]) grouped[cleanPhone] = [];
+        grouped[cleanPhone].push(pt);
+    });
+
+    window.bulkQueue = [];
+    Object.keys(grouped).forEach(function(phone) {
+        var patients = grouped[phone];
+        var combinedMsg = "";
+        patients.forEach(function(pt, i) {
+            var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
+            combinedMsg += getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
+            if (i < patients.length - 1) combinedMsg += "\n\n---\n\n";
+        });
+        
+        window.bulkQueue.push({
+            name: patients[0].name,
+            healeId: 'HEALE' + String(patients[0].id).padStart(4, '0'),
+            phone: phone,
+            message: combinedMsg,
+            day: day,
+            nextVisitDate: patients[0].nextVisitDate
+        });
+    });
+
+    window.bulkIndex = 0;
+    showBulkModal();
 }
 
 function sendBulkWhatsApp(day) {
-    processBulkSequence(day);
+    sendBulkSMS(day); // Same logic, user chooses WhatsApp or SMS in modal
 }
