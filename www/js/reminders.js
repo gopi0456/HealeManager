@@ -180,8 +180,28 @@ function sendBulkSMS(day) {
 function sendBulkWhatsApp(day) {
     var pts = window.reminderData[day] || [];
     if (!pts.length) { alert('No patients for ' + day); return; }
-    var firstPt = pts[0];
-    var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
-    var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
-    window.open('https://wa.me/91' + firstPt.phone + '?text=' + encodeURIComponent(msg), '_blank');
+    
+    if (!confirm('Bulk WhatsApp will open a separate chat for each patient (' + pts.length + ' total).\n\nYou will need to press "Send" on each one manually.\n\nContinue?')) {
+        return;
+    }
+
+    var index = 0;
+    function sendNext() {
+        if (index >= pts.length) {
+            alert('✅ Bulk WhatsApp process completed!');
+            return;
+        }
+        var pt = pts[index];
+        var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
+        var cleanPhone = String(pt.phone).replace(/\D/g, ''); // Remove any non-digits (spaces, dashes)
+        var msg = getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
+        var url = 'https://wa.me/91' + cleanPhone + '?text=' + encodeURIComponent(msg);
+        
+        window.open(url, '_blank');
+        
+        index++;
+        setTimeout(sendNext, 2500); // 2.5 second delay between each to allow you to press Send
+    }
+    
+    sendNext();
 }
