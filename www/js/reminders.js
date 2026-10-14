@@ -206,7 +206,10 @@ function filterReminders(selectedDay) {
 window.bulkQueue = [];
 window.bulkIndex = 0;
 
-function startBulkProcess(day, type) {
+// ==========================================
+// BULLETPROOF BULK TAP-QUEUE SYSTEM
+// ==========================================
+function showBulkQueue(day, type) {
     var pts = window.reminderData[day] || [];
     if (!pts || pts.length === 0) {
         alert('No patients found for ' + day);
@@ -221,8 +224,15 @@ function startBulkProcess(day, type) {
         grouped[cleanPhone].push(pt);
     });
 
-    window.bulkQueue = [];
-    Object.keys(grouped).forEach(function(phone) {
+    var container = document.getElementById('reminderContainer');
+    var typeName = type === 'whatsapp' ? 'WhatsApp' : 'SMS';
+    
+    var html = '<div style="padding:20px;">';
+    html += '<h3 style="text-align:center; margin-bottom:10px; color:#3b82f6;">📤 Bulk ' + typeName + ' Queue</h3>';
+    html += '<p style="text-align:center; color:#666; margin-bottom:20px; font-size:14px;">Android blocks automatic sending to prevent spam.<br>Tap each button below to send one by one.</p>';
+    
+    var phoneNumbers = Object.keys(grouped);
+    phoneNumbers.forEach(function(phone, index) {
         var patients = grouped[phone];
         var combinedMsg = "";
         patients.forEach(function(pt, i) {
@@ -230,102 +240,30 @@ function startBulkProcess(day, type) {
             combinedMsg += getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
             if (i < patients.length - 1) combinedMsg += "\n\n---\n\n";
         });
-        
-        window.bulkQueue.push({
-            name: patients[0].name,
-            phone: phone,
-            message: combinedMsg,
-            type: type
-        });
+
+        var encodedMsg = encodeURIComponent(combinedMsg);
+        var url = type === 'whatsapp' 
+            ? 'https://wa.me/91' + phone + '?text=' + encodedMsg
+            : 'sms:' + phone + '?body=' + encodedMsg;
+
+        var patientNames = patients.map(function(p) { return p.name; }).join(' & ');
+
+        // THIS IS THE KEY: A REAL <a> TAG THAT THE USER PHYSICALLY TAPS
+        html += '<a href="' + url + '" target="_blank" style="display:block; background:' + (type === 'whatsapp' ? '#10b981' : '#3b82f6') + '; color:white; padding:15px; border-radius:8px; text-decoration:none; font-weight:bold; text-align:center; margin-bottom:12px; font-size:16px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">';
+        html += '💬 Send to: ' + patientNames + '<br><span style="font-size:14px; font-weight:normal; opacity:0.9;">' + phone + '</span>';
+        html += '</a>';
     });
 
-    window.bulkIndex = 0;
-    showBulkModal();
-}
+    html += '<button onclick="loadReminders()" style="width:100%; padding:15px; background:#6b7280; color:white; border:none; border-radius:8px; font-weight:bold; font-size:16px; margin-top:20px; cursor:pointer;">← Back to Reminders List</button>';
+    html += '</div>';
 
-function showBulkModal() {
-    if (window.bulkIndex >= window.bulkQueue.length) {
-        closeBulkModal();
-        alert('✅ Bulk messaging completed!');
-        return;
-    }
-
-    var current = window.bulkQueue[window.bulkIndex];
-    var progress = (window.bulkIndex + 1) + ' / ' + window.bulkQueue.length;
-    var typeName = current.type === 'whatsapp' ? 'WhatsApp' : 'SMS';
-    
-    var modal = document.getElementById('bulkModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'bulkModal';
-        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
-        document.body.appendChild(modal);
-    }
-
-    modal.innerHTML = '<div style="background:white; border-radius:12px; padding:20px; max-width:400px; width:100%; max-height:80vh; overflow-y:auto;">' +
-        '<h3 style="margin-top:0; color:#3b82f6;">Bulk ' + typeName + ' (' + progress + ')</h3>' +
-        '<div style="background:#f0f9ff; padding:12px; border-radius:8px; margin-bottom:15px;">' +
-        '<strong>Patient:</strong> ' + current.name + '<br>' +
-        '<strong>Phone:</strong> ' + current.phone +
-        '</div>' +
-        '<div style="background:#f8fafc; padding:12px; border-radius:8px; margin-bottom:15px; font-size:13px; white-space:pre-wrap; max-height:150px; overflow-y:auto;">' + current.message + '</div>' +
-        '<button id="btnSendBulk" style="width:100%; padding:12px; background:' + (current.type === 'whatsapp' ? '#10b981' : '#3b82f6') + '; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:16px;">💬 Send ' + typeName + '</button>' +
-        '<button onclick="skipCurrentBulk()" style="width:100%; margin-top:10px; padding:10px; background:#6b7280; color:white; border:none; border-radius:6px; cursor:pointer;">Skip</button>' +
-        '<button onclick="closeBulkModal()" style="width:100%; margin-top:8px; padding:10px; background:#ef4444; color:white; border:none; border-radius:6px; cursor:pointer;">Cancel All</button>' +
-        '</div>';
-
-    modal.style.display = 'flex';
-    
-    // Attach click event directly to avoid any quote escaping issues
-    document.getElementById('btnSendBulk').addEventListener('click', function() {
-        sendCurrentBulkItem();
-    });
-}
-
-function sendCurrentBulkItem() {
-    var current = window.bulkQueue[window.bulkIndex];
-    var cleanPhone = String(current.phone).replace(/\D/g, '');
-    var encodedMsg = encodeURIComponent(current.message);
-    
-    var url = current.type === 'whatsapp' 
-        ? 'https://wa.me/91' + cleanPhone + '?text=' + encodedMsg
-        : 'sms:' + cleanPhone + '?body=' + encodedMsg;
-    
-    // Direct user click trigger - guaranteed to bypass WebView blocks
-    var a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
-    // Auto-advance to next patient after 1.5 seconds
-    setTimeout(function() {
-        window.bulkIndex++;
-        showBulkModal();
-    }, 1500);
-}
-
-function skipCurrentBulk() {
-    window.bulkIndex++;
-    showBulkModal();
-}
-
-function closeBulkModal() {
-    var modal = document.getElementById('bulkModal');
-    if (modal) {
-        modal.style.display = 'none';
-        modal.remove();
-    }
-    window.bulkQueue = [];
-    window.bulkIndex = 0;
+    container.innerHTML = html;
 }
 
 function sendBulkSMS(day) {
-    startBulkProcess(day, 'sms');
+    showBulkQueue(day, 'sms');
 }
 
 function sendBulkWhatsApp(day) {
-    startBulkProcess(day, 'whatsapp');
+    showBulkQueue(day, 'whatsapp');
 }
