@@ -209,6 +209,10 @@ window.bulkIndex = 0;
 // ==========================================
 // BULLETPROOF BULK TAP-QUEUE SYSTEM
 // ==========================================
+
+// ==========================================
+// BULLETPROOF MANUAL TAP QUEUE SYSTEM
+// ==========================================
 function showBulkQueue(day, type) {
     var pts = window.reminderData[day] || [];
     if (!pts || pts.length === 0) {
@@ -248,7 +252,7 @@ function showBulkQueue(day, type) {
 
         var patientNames = patients.map(function(p) { return p.name; }).join(' & ');
 
-        // THIS IS THE KEY: A REAL <a> TAG THAT THE USER PHYSICALLY TAPS
+        // THIS IS THE KEY: A REAL <a> TAG THAT THE USER PHYSICALLY TAPS (100% WebView safe)
         html += '<a href="' + url + '" target="_blank" style="display:block; background:' + (type === 'whatsapp' ? '#10b981' : '#3b82f6') + '; color:white; padding:15px; border-radius:8px; text-decoration:none; font-weight:bold; text-align:center; margin-bottom:12px; font-size:16px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">';
         html += '💬 Send to: ' + patientNames + '<br><span style="font-size:14px; font-weight:normal; opacity:0.9;">' + phone + '</span>';
         html += '</a>';
