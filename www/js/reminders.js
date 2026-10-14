@@ -168,41 +168,58 @@ function filterReminders(selectedDay) {
 
 
 
+
 function sendBulkSMS(day) {
     var pts = window.reminderData[day] || [];
-    if (!pts || pts.length === 0) {
-        alert('No patients found for ' + day);
-        return;
-    }
-    var firstPt = pts[0];
-    var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
-    var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
-    var phones = pts.map(function(p) { return p.phone; }).join(',');
-    var url = 'sms:' + phones + '?body=' + encodeURIComponent(msg);
+    if (!pts || pts.length === 0) return;
+
+    var grouped = {};
+    pts.forEach(function(pt) {
+        var cleanPhone = String(pt.phone).replace(/\D/g, '');
+        if (!grouped[cleanPhone]) grouped[cleanPhone] = [];
+        grouped[cleanPhone].push(pt);
+    });
+
+    var firstPhone = Object.keys(grouped)[0];
+    var patients = grouped[firstPhone];
     
-    // Synchronous link click bypasses WebView popup/redirect blockers
-    var a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    var combinedMsg = "";
+    patients.forEach(function(pt, i) {
+        var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
+        combinedMsg += getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
+        if (i < patients.length - 1) combinedMsg += "\n\n---\n\n";
+    });
+
+    var url = 'sms:' + firstPhone + '?body=' + encodeURIComponent(combinedMsg);
+    window.location.href = url;
 }
 
 function sendBulkWhatsApp(day) {
     var pts = window.reminderData[day] || [];
-    if (!pts || pts.length === 0) {
-        alert('No patients found for ' + day);
-        return;
-    }
-    var firstPt = pts[0];
-    var healeId = 'HEALE' + String(firstPt.id).padStart(4, '0');
-    var msg = getReminderMessage(firstPt.name, healeId, firstPt.visitDate, firstPt.nextVisitDate, day);
-    var cleanPhone = String(firstPt.phone).replace(/\D/g, '');
-    var url = 'https://wa.me/91' + cleanPhone + '?text=' + encodeURIComponent(msg);
+    if (!pts || pts.length === 0) return;
+
+    // Group by phone number to handle shared family numbers
+    var grouped = {};
+    pts.forEach(function(pt) {
+        var cleanPhone = String(pt.phone).replace(/\D/g, '');
+        if (!grouped[cleanPhone]) grouped[cleanPhone] = [];
+        grouped[cleanPhone].push(pt);
+    });
+
+    var firstPhone = Object.keys(grouped)[0];
+    var patients = grouped[firstPhone];
     
-    // Synchronous link click bypasses WebView popup/redirect blockers
+    // Combine messages for patients sharing the same number
+    var combinedMsg = "";
+    patients.forEach(function(pt, i) {
+        var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
+        combinedMsg += getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
+        if (i < patients.length - 1) combinedMsg += "\n\n---\n\n";
+    });
+
+    var url = 'https://wa.me/91' + firstPhone + '?text=' + encodeURIComponent(combinedMsg);
+    
+    // Exact same mechanism as the individual button: create link, set target="_blank", append, click
     var a = document.createElement('a');
     a.href = url;
     a.target = '_blank';
