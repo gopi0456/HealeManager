@@ -227,6 +227,62 @@ async function processBulkSequence(day) {
     alert('✅ Bulk messaging sequence completed!');
 }
 
+
+async function processBulkSequence(day) {
+    var pts = window.reminderData[day] || [];
+    if (!pts || pts.length === 0) {
+        alert('No patients found for ' + day);
+        return;
+    }
+
+    // Group by phone number so family members sharing a number get ONE combined message
+    var grouped = {};
+    pts.forEach(function(pt) {
+        var cleanPhone = String(pt.phone).replace(/\D/g, '');
+        if (!grouped[cleanPhone]) grouped[cleanPhone] = [];
+        grouped[cleanPhone].push(pt);
+    });
+
+    var phoneNumbers = Object.keys(grouped);
+    var total = phoneNumbers.length;
+
+    if (!confirm('Automated Bulk Send:\n\nThis will open the native share sheet for ' + total + ' unique number(s) one by one.\n\nAfter you send each message, the next one will appear automatically.\n\nStart?')) {
+        return;
+    }
+
+    for (var i = 0; i < phoneNumbers.length; i++) {
+        var phone = phoneNumbers[i];
+        var patients = grouped[phone];
+        
+        // Combine messages for shared numbers
+        var combinedMsg = "";
+        patients.forEach(function(pt, j) {
+            var healeId = 'HEALE' + String(pt.id).padStart(4, '0');
+            combinedMsg += getReminderMessage(pt.name, healeId, pt.visitDate, pt.nextVisitDate, day);
+            if (j < patients.length - 1) combinedMsg += "\n\n---\n\n";
+        });
+
+        console.log('Sending bulk message ' + (i + 1) + '/' + total + ' to ' + phone);
+
+        try {
+            // Use Capacitor Share plugin (opens native Android share sheet)
+            await Capacitor.Plugins.Share.share({
+                title: 'Patient Reminder',
+                text: combinedMsg
+            });
+            
+            // Wait 1 second after the share sheet closes before showing the next one
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+        } catch (e) {
+            console.log('Share cancelled or failed for ' + phone + ':', e);
+            // Continue to the next one even if this one was cancelled
+        }
+    }
+
+    alert('✅ Bulk messaging sequence completed!');
+}
+
 function sendBulkSMS(day) {
     processBulkSequence(day);
 }
