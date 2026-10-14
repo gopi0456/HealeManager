@@ -28,7 +28,7 @@ echo "✅ Build complete"
 # Step 3: Copy APK to project root
 echo ""
 echo "📦 Step 3: Copying APK..."
-cp app/build/outputs/apk/debug/app-debug.apk ../PatientApps.apk
+cp app/build/outputs/apk/debug/app-debug.apk /data/data/com.termux/files/home/storage/dcim/PatientApps.apk
 cd ..
 
 echo ""

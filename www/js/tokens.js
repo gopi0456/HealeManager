@@ -16,7 +16,7 @@ function addToToken(dbId, name, phone, btn) {
                         return;
                     }
 
-                    tx.executeSql('SELECT MAX(token_number) as max_t FROM tokens WHERE token_date=?',
+                    tx.executeSql('SELECT MAX(token_number) as max_t FROM tokens WHERE token_date=? WHERE token_date=?',
                         [today], function(tx, res) {
                             let nextTokenNum = 1;
                             if (res.rows.length > 0 && res.rows.item(0).max_t) {
@@ -68,6 +68,37 @@ function addToToken(dbId, name, phone, btn) {
 // ==========================================
 // 2. LOAD TODAY'S TOKENS
 // ==========================================
+
+// ==========================================
+// AUTO-CLEANUP: Move yesterday's unserved tokens to visits
+// ==========================================
+function cleanupExpiredTokens() {
+    if (typeof db === 'undefined' || !db) return;
+    const today = getTodayDate();
+    
+    db.transaction(function(tx) {
+        tx.executeSql('SELECT id, patient_id, patient_name, token_number, token_date FROM tokens WHERE token_date != ?', [today], 
+        function(tx, res) {
+            let count = 0;
+            for (let i = 0; i < res.rows.length; i++) {
+                let row = res.rows.item(i);
+                let note = 'Not visited today. Token: #' + row.token_number + ' on ' + row.token_date;
+                
+                // Move to visits table
+                tx.executeSql('INSERT INTO visits (patient_id, notes, date_time, token_number, visit_date) VALUES (?, ?, ?, ?, ?)',
+                    [row.patient_id, note, row.token_date, row.token_number, row.token_date]);
+                
+                // Delete from tokens
+                tx.executeSql('DELETE FROM tokens WHERE id = ?', [row.id]);
+                count++;
+            }
+            if (count > 0) {
+                console.log('✅ Auto-cleaned ' + count + ' expired token(s)');
+            }
+        });
+    });
+}
+
 function loadTodayTokens() {
     try {
         const today = getTodayDate();
