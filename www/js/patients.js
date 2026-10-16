@@ -21,7 +21,6 @@ function addPatient() {
                     alert('User already exists!\n\nHeale ID: ' + generatePatientId(checkRes.rows.item(0).id));
                     return;
                 }
-                // Registration note goes to PATIENTS table only - NOT counted as a visit
                 tx.executeSql('INSERT INTO patients (name,age,phone,aadhar,address,notes,date_time) VALUES (?,?,?,?,?,?,?)',
                     [name, age, phone, aadhar, address, notes, dt],
                     function(tx, r) {
@@ -43,7 +42,6 @@ function addPatient() {
         );
     });
 }
-
 
 function showSuccessModal() {
     const nextVisit = getNextVisitDate(parseDate(lastSavedPatient.date_time));
@@ -121,14 +119,12 @@ function renderSearchResults(pv) {
         var pid = d.permanentId;
         var healeIdStr = 'HEALE' + String(pid).padStart(4, '0');
         
-        // Get registration date safely
         var regDate = 'N/A';
         var today = new Date();
-        var lastVisit = today; // Default to today
+        var lastVisit = today;
         
         if (p.date_time && String(p.date_time).length >= 10) {
             regDate = String(p.date_time).substring(0, 10);
-            // Replace space with 'T' to make it a valid ISO date for all browsers
             var dateStr = String(p.date_time).replace(' ', 'T');
             var parsedDate = new Date(dateStr);
             if (!isNaN(parsedDate.getTime())) {
@@ -140,7 +136,7 @@ function renderSearchResults(pv) {
         var weeksSince = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000));
         var missedWeeks = weeksSince === 0 ? 'Today' : weeksSince + ' week' + (weeksSince > 1 ? 's' : '') + ' ago';
         
-        var safeName = p.name.replace(/'/g, "\\'");
+        var safeName = p.name.replace(/'/g, "'");
         
         var html = '<div class="patient-card">';
         html += '<div class="patient-header">';
@@ -195,7 +191,7 @@ function showPatientDetail(patientId) {
                 
                 tx.executeSql('SELECT * FROM visits WHERE patient_id = ? ORDER BY date_time DESC', [patientId],
                     function(tx, vRes) {
-                        const totalVisits = vRes.rows.length; // Count ONLY token visits
+                        const totalVisits = vRes.rows.length;
                         
                         let html = `
                             <div class="patient-detail-header">
@@ -213,7 +209,6 @@ function showPatientDetail(patientId) {
                                 <h3>📋 History</h3>
                                 <div class="visit-list">`;
                         
-                        // 1. Show Registration Notes if they exist (does not affect visit count)
                         if (p.notes && String(p.notes).trim() !== '') {
                             html += `
                                 <div class="visit-item" style="border-left-color: #10b981;">
@@ -224,7 +219,6 @@ function showPatientDetail(patientId) {
                                 </div>`;
                         }
 
-                        // 2. Show Token Visits
                         if (totalVisits === 0 && (!p.notes || String(p.notes).trim() === '')) {
                             html += '<div class="empty-visit">No visits recorded yet.</div>';
                         } else {
@@ -243,6 +237,10 @@ function showPatientDetail(patientId) {
                         }
                         html += `</div></div>`;
                         
+                        // ADD EDIT BUTTON HERE
+                        html += `<button class="btn-edit" onclick="openEditPatient(${patientId})" style="width:100%; padding:12px; background:#f59e0b; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; margin-top:15px;">✏️ Edit Patient Details</button>`;
+                        html += `<button class="btn-close-modal" onclick="document.getElementById('patientDetailModal').classList.remove('active')" style="width:100%; padding:12px; background:#ef4444; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; margin-top:10px;">Close</button>`;
+                        
                         let modal = document.getElementById('patientDetailModal');
                         if (!modal) {
                             modal = document.createElement('div');
@@ -251,7 +249,6 @@ function showPatientDetail(patientId) {
                             modal.innerHTML = `
                                 <div class="modal-box detail-modal-box">
                                     <div id="patientDetailContent"></div>
-                                    <button class="btn-close-modal" onclick="document.getElementById('patientDetailModal').classList.remove('active')">Close</button>
                                 </div>`;
                             document.body.appendChild(modal);
                         }
@@ -263,6 +260,105 @@ function showPatientDetail(patientId) {
             function(e) { alert('❌ Patient query error: ' + e.message); });
     });
 }
+
+// ==========================================
+// NEW: EDIT PATIENT FUNCTIONS (Isolated, does not affect existing code)
+// ==========================================
+function openEditPatient(patientId) {
+    db.transaction(function(tx) {
+        tx.executeSql('SELECT * FROM patients WHERE id = ?', [patientId],
+            function(tx, res) {
+                if (res.rows.length === 0) { alert('❌ Patient not found'); return; }
+                const p = res.rows.item(0);
+                
+                window.editingPatientId = patientId;
+                
+                document.getElementById('name').value = p.name || '';
+                document.getElementById('age').value = p.age || '';
+                document.getElementById('phone').value = p.phone || '';
+                document.getElementById('aadhar').value = p.aadhar || '';
+                document.getElementById('address').value = p.address || '';
+                document.getElementById('notes').value = p.notes || '';
+                
+                document.getElementById('patientDetailModal').classList.remove('active');
+                showPage('addPage');
+                
+                const saveBtn = document.querySelector('#addPage .main-btn');
+                if (saveBtn) {
+                    saveBtn.textContent = '💾 Update Patient Details';
+                    saveBtn.style.background = '#f59e0b';
+                    saveBtn.onclick = function() { updatePatientDetails(); };
+                    
+                    if (!document.getElementById('cancelEditBtn')) {
+                        const cancelBtn = document.createElement('button');
+                        cancelBtn.id = 'cancelEditBtn';
+                        cancelBtn.textContent = '❌ Cancel Edit';
+                        cancelBtn.style.cssText = 'width:100%; padding:12px; background:#ef4444; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; margin-top:10px;';
+                        cancelBtn.onclick = function() {
+                            ['name','age','phone','aadhar','address','notes'].forEach(function(f) {
+                                document.getElementById(f).value = '';
+                            });
+                            saveBtn.textContent = 'Save Registration';
+                            saveBtn.style.background = '';
+                            saveBtn.onclick = function() { addPatient(); };
+                            window.editingPatientId = null;
+                            document.getElementById('cancelEditBtn').remove();
+                            showPage('menuPage');
+                        };
+                        saveBtn.parentNode.insertBefore(cancelBtn, saveBtn.nextSibling);
+                    }
+                }
+            },
+            function(e) { alert('❌ Error: ' + e.message); }
+        );
+    });
+}
+
+function updatePatientDetails() {
+    const patientId = window.editingPatientId;
+    if (!patientId) { alert('❌ Error: No patient ID found for update.'); return; }
+    
+    var name = document.getElementById('name').value.trim();
+    var age = document.getElementById('age').value;
+    var phone = document.getElementById('phone').value.trim();
+    var aadhar = document.getElementById('aadhar').value.trim();
+    var address = document.getElementById('address').value.trim();
+    var notes = document.getElementById('notes').value.trim();
+
+    if (!name || !phone || !aadhar) { alert('Name, Phone, Aadhar required!'); return; }
+    if (phone.length !== 10 || !/^[0-9]+$/.test(phone)) { alert('Phone must be 10 digits!'); return; }
+    if (aadhar.length !== 5 || !/^[0-9]+$/.test(aadhar)) { alert('Aadhar must be 5 digits!'); return; }
+
+    db.transaction(function(tx) {
+        tx.executeSql('UPDATE patients SET name=?, age=?, phone=?, aadhar=?, address=?, notes=? WHERE id=?',
+            [name, age, phone, aadhar, address, notes, patientId],
+            function() {
+                alert('✅ Patient details updated successfully!');
+                
+                ['name','age','phone','aadhar','address','notes'].forEach(function(f) {
+                    document.getElementById(f).value = '';
+                });
+                
+                const saveBtn = document.querySelector('#addPage .main-btn');
+                if (saveBtn) {
+                    saveBtn.textContent = 'Save Registration';
+                    saveBtn.style.background = ''; 
+                    saveBtn.onclick = function() { addPatient(); };
+                }
+                
+                window.editingPatientId = null;
+                if (document.getElementById('cancelEditBtn')) {
+                    document.getElementById('cancelEditBtn').remove();
+                }
+                
+                showPage('heliRecordPage');
+                if (typeof searchPatients === 'function') searchPatients();
+            },
+            function(e) { alert('❌ Update Error: ' + e.message); }
+        );
+    });
+}
+// ==========================================
 
 function closeDetail() { 
     document.getElementById('detailOverlay').classList.remove('active'); 
@@ -305,8 +401,6 @@ function loadDashboard() {
     }); 
 }
 
-
-// ===== REPRINT FROM HEALE RECORD =====
 function reprintFromHealeRecord(patientId, patientName, patientPhone) {
     console.log("🖨️ Reprint from Heale Record for ID:", patientId);
     
@@ -322,7 +416,6 @@ function reprintFromHealeRecord(patientId, patientName, patientPhone) {
                 var today = new Date().toISOString().split('T')[0];
                 var currentTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
                 
-                // Show the token ticket modal
                 var modal = document.getElementById('tokenTicketModal');
                 if (!modal) {
                     alert('❌ Token modal not found');
