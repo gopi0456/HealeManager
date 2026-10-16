@@ -16,7 +16,6 @@ function addToToken(dbId, name, phone, btn) {
                         return;
                     }
 
-                    // Step 1: Get max from tokens table
                     tx.executeSql('SELECT MAX(token_number) as max_t FROM tokens WHERE token_date=?',
                         [today], function(tx, res1) {
                             let maxFromTokens = 0;
@@ -24,7 +23,6 @@ function addToToken(dbId, name, phone, btn) {
                                 maxFromTokens = parseInt(res1.rows.item(0).max_t, 10);
                             }
                             
-                            // Step 2: Get max from visits table
                             tx.executeSql('SELECT MAX(token_number) as max_t FROM visits WHERE date_time LIKE ?',
                                 [today + '%'], function(tx, res2) {
                                     let maxFromVisits = 0;
@@ -32,11 +30,8 @@ function addToToken(dbId, name, phone, btn) {
                                         maxFromVisits = parseInt(res2.rows.item(0).max_t, 10);
                                     }
                                     
-                                    // Step 3: Use the maximum of both
                                     let nextTokenNum = Math.max(maxFromTokens, maxFromVisits) + 1;
-                                    console.log('🔍 Token Debug - From tokens:', maxFromTokens, '| From visits:', maxFromVisits, '| Next:', nextTokenNum);
 
-                                    // Step 4: Insert the new token
                                     tx.executeSql('INSERT INTO tokens (patient_id, patient_name, patient_phone, token_date, created_at, token_number) VALUES (?,?,?,?,?,?)',
                                         [dbId, name, phone, today, currentTime, nextTokenNum],
                                         function() {
@@ -80,7 +75,6 @@ function addToToken(dbId, name, phone, btn) {
     }
 }
 
-
 function loadTodayTokens() {
     try {
         const today = getTodayDate();
@@ -106,6 +100,7 @@ function loadTodayTokens() {
                     for (let i = 0; i < r.rows.length; i++) {
                         const t = r.rows.item(i);
                         const pid = 'HEALE' + String(t.patient_id).padStart(4, '0');
+                        const safeName = t.patient_name.replace(/'/g, "\\'");
                         
                         const div = document.createElement('div');
                         div.className = 'token-card';
@@ -114,17 +109,14 @@ function loadTodayTokens() {
                             <h3 class="token-name-link" style="cursor: pointer; text-decoration: underline; color: #3b82f6;">${t.patient_name} 👆</h3>
                             <p>🆔 ${pid} | 📞 ${t.patient_phone}</p>
                             <p class="token-time">${t.created_at}</p>
-                            <button class="btn-view btn-reprint-link" style="margin-top:8px; width:100%; font-size:12px; padding:8px;">🖨️ Reprint Token</button>
+                            <div style="display:flex; gap:8px; margin-top:8px;">
+                                <button class="btn-reprint-link" style="flex:1; font-size:12px; padding:8px; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer;" onclick="reprintToken(${t.token_number}, '${safeName}', '${pid}', '${t.patient_phone}', '${t.created_at}')">🖨️ Reprint</button>
+                                <button style="flex:1; font-size:12px; padding:8px; background:#ef4444; color:white; border:none; border-radius:6px; cursor:pointer;" onclick="markTokenAsNotVisited(${t.id}, ${t.patient_id}, '${safeName}', '${t.patient_phone}', ${t.token_number}, '${t.token_date}')">❌ Not Visited</button>
+                            </div>
                         `;
                         
                         div.querySelector('.token-name-link').addEventListener('click', function() {
-                            console.log("✅ Opening visit for:", t.patient_name);
                             openTokenVisit(t.id, t.patient_id, t.patient_name, t.patient_phone);
-                        });
-                        
-                        div.querySelector('.btn-reprint-link').addEventListener('click', function() {
-                            console.log("✅ Reprinting for:", t.patient_name);
-                            reprintToken(t.token_number, t.patient_name, pid, t.patient_phone, t.created_at);
                         });
                         
                         list.appendChild(div);
@@ -132,14 +124,40 @@ function loadTodayTokens() {
                 },
                 function(err) { 
                     console.error("❌ Error loading tokens:", err);
-                    const list = document.getElementById('tokenList');
-                    if (list) list.innerHTML = '<p style="color:red; text-align:center;">Error loading tokens. Please refresh.</p>';
                 }
             );
         });
     } catch (e) {
         console.error("❌ loadTodayTokens error:", e);
     }
+}
+
+// ==========================================
+// NEW: MARK TOKEN AS NOT VISITED
+// ==========================================
+function markTokenAsNotVisited(tokenId, patientDbId, patientName, patientPhone, tokenNum, tokenDate) {
+    if (!confirm(`Mark Token #${tokenNum} for ${patientName} as NOT VISITED?\n\nThis will save it to the visit history and remove it from today's pending tokens.`)) return;
+    
+    const dt = tokenDate + ' 23:59:00'; // End of token date
+    const notes = 'Not Visited';
+    
+    db.transaction(function(tx) {
+        // 1. Insert into visits table
+        tx.executeSql('INSERT INTO visits (patient_id, notes, date_time, token_number) VALUES (?,?,?,?)',
+            [patientDbId, notes, dt, tokenNum],
+            function() {
+                // 2. Delete from pending tokens
+                tx.executeSql('DELETE FROM tokens WHERE id = ?', [tokenId],
+                    function() {
+                        alert('✅ Marked as Not Visited for ' + patientName + '\nToken: #' + tokenNum + '\nSaved to visit history.');
+                        loadTodayTokens(); // Refresh the list
+                    },
+                    function(err) { alert('❌ Error deleting token: ' + err.message); }
+                );
+            },
+            function(err) { alert('❌ Error saving visit: ' + err.message); }
+        );
+    });
 }
 
 // ==========================================
@@ -185,7 +203,7 @@ function openTokenVisit(tokenId, patientDbId, patientName, patientPhone) {
                     }
                     html += '</div>';
                     
-                    const safeName = patientName.replace(/'/g, "\\'");
+                    const safeName = patientName.replace(/'/g, "'");
                     html += '<div class="new-visit-section" style="margin-top:20px;"><h3>✏️ Add Today\'s Medical Notes</h3><textarea id="newVisitNotes" placeholder="Enter medical notes..." style="width:100%; height:100px; padding:10px; border:1px solid #ccc; border-radius:6px; margin-bottom:10px;"></textarea><button class="btn-save-visit" style="width:100%; padding:12px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer;" onclick="saveTokenVisit(' + tokenId + ',' + patientDbId + ',\'' + safeName + '\',\'' + patientPhone + '\',document.getElementById(\'newVisitNotes\').value)"> Save Visit & Return</button></div>';
                     
                     contentDiv.innerHTML = html;
@@ -194,8 +212,6 @@ function openTokenVisit(tokenId, patientDbId, patientName, patientPhone) {
         });
     } catch (e) {
         console.error("❌ openTokenVisit error:", e);
-        const contentDiv = document.getElementById('tokenVisitContent');
-        if (contentDiv) contentDiv.innerHTML = '<p style="color:red;">Error loading details: ' + e.message + '</p><button onclick="showPage(\'todayTokenPage\')">Back</button>';
     }
 }
 
@@ -232,19 +248,16 @@ function saveTokenVisit(tokenId, patientDbId, patientName, patientPhone, notes) 
 }
 
 // ==========================================
-// 5. REPRINT TOKEN (Instant, No DB Query to prevent hanging)
+// 5. REPRINT TOKEN
 // ==========================================
 function reprintToken(tokenNum, name, id, phone, date) {
-    console.log("🖨️ Reprint:", { tokenNum, name, id, phone, date });
-    
-    // CRITICAL: Set window.currentTicket so share/print functions have the correct data
     window.currentTicket = {
         tokenNum: '#' + tokenNum,
         name: name,
         id: id,
         phone: phone,
         date: date,
-        notes: 'Pending visit...' // Reprint shows pending unless updated
+        notes: 'Pending visit...'
     };
     
     document.getElementById('ticketTokenNum').textContent = '#' + tokenNum;
@@ -271,12 +284,3 @@ function closeTokenTicket() {
         modal.style.display = 'none';
     }
 }
-
-// Safely trigger cleanup when the app is ready, avoiding transaction deadlocks
-document.addEventListener('deviceready', function() {
-    setTimeout(function() {
-        if (typeof cleanupExpiredTokens === 'function') {
-            cleanupExpiredTokens();
-        }
-    }, 1000); // 1 second delay ensures no other initial transactions are blocking
-}, false);
