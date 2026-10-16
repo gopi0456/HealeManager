@@ -342,18 +342,19 @@ function closeDetailIfOutside(e) { if (e.target === document.getElementById('det
 function loadDashboard() { 
     const now = new Date();
     const today = getTodayDate();
-    const ms = '01/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear(); 
+    const monthYear = '/' + String(now.getMonth()+1).padStart(2,'0') + '/' + now.getFullYear();
+    const monthStart = '01' + monthYear;
     
     db.transaction(function(tx) { 
         // 1. Total Patients
         tx.executeSql('SELECT COUNT(*) as c FROM patients', [], 
             function(tx,r){ document.getElementById('totalPatients').textContent = r.rows.item(0).c; }); 
         
-        // 2. Today's Unique Patients
+        // 2. Today's Unique Patients (new registrations today)
         tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
             function(tx,r){ document.getElementById('todayPatients').textContent = r.rows.item(0).c; }); 
         
-        // 3. Today's Tokens + Today's Visits (SUM of both)
+        // 3. Today's Tokens + Today's Visits (total patient interactions today)
         tx.executeSql(`
             SELECT 
                 (SELECT COUNT(*) FROM tokens WHERE token_date = ?) + 
@@ -362,17 +363,17 @@ function loadDashboard() {
             document.getElementById('todayTokens').textContent = r.rows.item(0).c; 
         }); 
         
-        // 4. Monthly Patients
-        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time>=?', [ms], 
+        // 4. THIS MONTH VISITS (changed from unique patients to actual visits)
+        tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', 
+            ['%' + monthYear], 
             function(tx,r){ document.getElementById('monthPatients').textContent = r.rows.item(0).c; }); 
         
-        // 5. Reminder Count (FIXED: Only counts patients whose 7-day follow-up is today or overdue)
+        // 5. Reminder Count (patients whose 7-day follow-up is today or overdue)
         tx.executeSql('SELECT * FROM patients', [], function(tx, r) { 
             const todayDate = new Date(); 
             todayDate.setHours(0, 0, 0, 0);
             const plv = {}; 
             
-            // Group by unique patient and find their latest visit date
             for (let i = 0; i < r.rows.length; i++) { 
                 const p = r.rows.item(i);
                 const vd = parseDate(p.date_time); 
@@ -382,7 +383,6 @@ function loadDashboard() {
                 if (!plv[_k] || vd > plv[_k]) plv[_k] = vd; 
             } 
             
-            // Count how many unique patients are due or overdue for their 7-day follow-up
             let rc = 0; 
             Object.values(plv).forEach(d => { 
                 const nextVisit = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7);
@@ -394,9 +394,10 @@ function loadDashboard() {
             document.getElementById('reminderCount').textContent = rc; 
         }); 
         
-        // 6. Average Per Day
-        tx.executeSql('SELECT COUNT(DISTINCT phone) as c FROM patients WHERE date_time LIKE ?', 
-            ['%/'+String(now.getMonth()+1).padStart(2,'0')+'/%'], function(tx, r) { 
+        // 6. Average Per Day (based on visits this month, not registrations)
+        tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', 
+            ['%' + monthYear], 
+            function(tx, r) { 
                 const dp = now.getDate(); 
                 document.getElementById('avgPerDay').textContent = dp > 0 ? Math.round(r.rows.item(0).c / dp * 10) / 10 : 0; 
             }); 
