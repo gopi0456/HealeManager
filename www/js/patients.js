@@ -337,12 +337,14 @@ function closeDetail() { document.getElementById('detailOverlay').classList.remo
 function closeDetailIfOutside(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
 
 // ==========================================
-// FIXED DASHBOARD - Counts BOTH visits AND tokens for the month
+// FIXED DASHBOARD WITH DEBUG LOGGING
 // ==========================================
 function loadDashboard() { 
     const now = new Date();
     const today = getTodayDate();
     const monthYear = '/' + String(now.getMonth()+1).padStart(2,'0') + '/' + now.getFullYear();
+    
+    console.log('🔍 Dashboard Debug - Today:', today, '| Month/Year pattern:', '%' + monthYear);
     
     db.transaction(function(tx) { 
         // 1. Total Patients
@@ -356,19 +358,27 @@ function loadDashboard() {
         // 3. Today's Tokens + Today's Visits
         tx.executeSql(`
             SELECT 
-                (SELECT COUNT(*) FROM tokens WHERE token_date = ?) + 
-                (SELECT COUNT(*) FROM visits WHERE date_time LIKE ?) as c
+                (SELECT COUNT(*) FROM tokens WHERE token_date = ?) as t,
+                (SELECT COUNT(*) FROM visits WHERE date_time LIKE ?) as v
         `, [today, today + '%'], function(tx, r) { 
-            document.getElementById('todayTokens').textContent = r.rows.item(0).c; 
+            const tokens = r.rows.item(0).t;
+            const visits = r.rows.item(0).v;
+            const total = tokens + visits;
+            console.log('📊 Today - Tokens:', tokens, '| Visits:', visits, '| Total:', total);
+            document.getElementById('todayTokens').textContent = total; 
         }); 
         
-        // 4. THIS MONTH VISITS = Visits + Tokens for the month (FIXED!)
+        // 4. THIS MONTH VISITS = Visits + Tokens for the month
         tx.executeSql(`
             SELECT 
-                (SELECT COUNT(*) FROM visits WHERE date_time LIKE ?) + 
-                (SELECT COUNT(*) FROM tokens WHERE token_date LIKE ?) as c
+                (SELECT COUNT(*) FROM visits WHERE date_time LIKE ?) as v,
+                (SELECT COUNT(*) FROM tokens WHERE token_date LIKE ?) as t
         `, ['%' + monthYear, '%' + monthYear], function(tx, r) { 
-            document.getElementById('monthPatients').textContent = r.rows.item(0).c; 
+            const visits = r.rows.item(0).v;
+            const tokens = r.rows.item(0).t;
+            const total = visits + tokens;
+            console.log('📊 This Month - Visits:', visits, '| Tokens:', tokens, '| Total:', total);
+            document.getElementById('monthPatients').textContent = total; 
         }); 
         
         // 5. FOLLOW-UP DUE
@@ -426,12 +436,13 @@ function loadDashboard() {
                             rc++; 
                         }
                     }); 
+                    console.log('🔔 Follow-up Due:', rc);
                     document.getElementById('reminderCount').textContent = rc; 
                 });
             });
         }); 
         
-        // 6. Average Per Day (based on visits + tokens this month)
+        // 6. Average Per Day
         tx.executeSql(`
             SELECT 
                 (SELECT COUNT(*) FROM visits WHERE date_time LIKE ?) + 
