@@ -36,7 +36,7 @@ async function printTicket() {
             doc.setFont(undefined, 'normal'); doc.text(notes, 10, y, { maxWidth: 60 });
         }
         
-        const fileName = 'Lakshmi_Ticket_' + tokenNum.replace('#', '') + '.pdf';
+        const fileName = name.replace(/[^a-zA-Z0-9]/g, '_') + '_heale_token.pdf';
         const base64Data = doc.output('datauristring').split(',')[1];
         
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
