@@ -19,9 +19,9 @@ async function printTicket() {
         
         doc.setFontSize(24); doc.setFont(undefined, 'bold');
         doc.text(tokenNum, 40, 20, { align: 'center' });
-        doc.setFontSize(14); doc.text('LAKSHMI ACUPUNCTURE', 40, 30, { align: 'center' });
+        doc.setFontSize(14); doc.text('CLAKSHMI ACUPUNCTURE', 40, 30, { align: 'center' });
         doc.setFontSize(9); doc.setFont(undefined, 'normal');
-        doc.text('LAKSHMI ACUPUNCTURE Token Ticket', 40, 36, { align: 'center' });
+        doc.text('Heale Token', 40, 36, { align: 'center' });
         doc.setLineWidth(0.5); doc.line(10, 40, 70, 40);
         
         doc.setFontSize(11); let y = 50;
