@@ -210,13 +210,7 @@ function showPatientDetail(patientId) {
                                 <div class="visit-list">`;
                         
                         if (p.notes && String(p.notes).trim() !== '') {
-                            html += `
-                                <div class="visit-item" style="border-left-color: #10b981;">
-                                    <div class="visit-item-header">
-                                        <span class="visit-date">📝 Registration Notes</span>
-                                    </div>
-                                    <div class="visit-notes">${p.notes}</div>
-                                </div>`;
+                            html += `<div class="visit-item" style="border-left-color: #10b981;"><div class="visit-item-header"><span class="visit-date">📝 Registration Notes</span></div><div class="visit-notes">${p.notes}</div></div>`;
                         }
 
                         if (totalVisits === 0 && (!p.notes || String(p.notes).trim() === '')) {
@@ -225,21 +219,13 @@ function showPatientDetail(patientId) {
                             for (let i = 0; i < totalVisits; i++) {
                                 const v = vRes.rows.item(i);
                                 const tokenBadge = v.token_number ? `<span class="token-badge">Token #${v.token_number}</span>` : '';
-                                html += `
-                                    <div class="visit-item">
-                                        <div class="visit-item-header">
-                                            <span class="visit-date">🕒 ${v.date_time}</span>
-                                            ${tokenBadge}
-                                        </div>
-                                        <div class="visit-notes">${v.notes || 'No notes recorded'}</div>
-                                    </div>`;
+                                html += `<div class="visit-item"><div class="visit-item-header"><span class="visit-date">🕒 ${v.date_time}</span>${tokenBadge}</div><div class="visit-notes">${v.notes || 'No notes recorded'}</div></div>`;
                             }
                         }
                         html += `</div></div>`;
                         
-                        // ADD EDIT BUTTON HERE
+                        // ONLY the Edit button here. The Close button is in the modal wrapper below.
                         html += `<button class="btn-edit" onclick="openEditPatient(${patientId})" style="width:100%; padding:12px; background:#f59e0b; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; margin-top:15px;">✏️ Edit Patient Details</button>`;
-                        html += `<button class="btn-close-modal" onclick="document.getElementById('patientDetailModal').classList.remove('active')" style="width:100%; padding:12px; background:#ef4444; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; margin-top:10px;">Close</button>`;
                         
                         let modal = document.getElementById('patientDetailModal');
                         if (!modal) {
@@ -249,6 +235,7 @@ function showPatientDetail(patientId) {
                             modal.innerHTML = `
                                 <div class="modal-box detail-modal-box">
                                     <div id="patientDetailContent"></div>
+                                    <button class="btn-close-modal" onclick="document.getElementById('patientDetailModal').classList.remove('active')" style="width:100%; padding:12px; background:#ef4444; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; margin-top:15px;">Close</button>
                                 </div>`;
                             document.body.appendChild(modal);
                         }
@@ -261,16 +248,12 @@ function showPatientDetail(patientId) {
     });
 }
 
-// ==========================================
-// NEW: EDIT PATIENT FUNCTIONS (Isolated, does not affect existing code)
-// ==========================================
 function openEditPatient(patientId) {
     db.transaction(function(tx) {
         tx.executeSql('SELECT * FROM patients WHERE id = ?', [patientId],
             function(tx, res) {
                 if (res.rows.length === 0) { alert('❌ Patient not found'); return; }
                 const p = res.rows.item(0);
-                
                 window.editingPatientId = patientId;
                 
                 document.getElementById('name').value = p.name || '';
@@ -295,9 +278,7 @@ function openEditPatient(patientId) {
                         cancelBtn.textContent = '❌ Cancel Edit';
                         cancelBtn.style.cssText = 'width:100%; padding:12px; background:#ef4444; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; margin-top:10px;';
                         cancelBtn.onclick = function() {
-                            ['name','age','phone','aadhar','address','notes'].forEach(function(f) {
-                                document.getElementById(f).value = '';
-                            });
+                            ['name','age','phone','aadhar','address','notes'].forEach(function(f) { document.getElementById(f).value = ''; });
                             saveBtn.textContent = 'Save Registration';
                             saveBtn.style.background = '';
                             saveBtn.onclick = function() { addPatient(); };
@@ -334,10 +315,7 @@ function updatePatientDetails() {
             [name, age, phone, aadhar, address, notes, patientId],
             function() {
                 alert('✅ Patient details updated successfully!');
-                
-                ['name','age','phone','aadhar','address','notes'].forEach(function(f) {
-                    document.getElementById(f).value = '';
-                });
+                ['name','age','phone','aadhar','address','notes'].forEach(function(f) { document.getElementById(f).value = ''; });
                 
                 const saveBtn = document.querySelector('#addPage .main-btn');
                 if (saveBtn) {
@@ -345,11 +323,8 @@ function updatePatientDetails() {
                     saveBtn.style.background = ''; 
                     saveBtn.onclick = function() { addPatient(); };
                 }
-                
                 window.editingPatientId = null;
-                if (document.getElementById('cancelEditBtn')) {
-                    document.getElementById('cancelEditBtn').remove();
-                }
+                if (document.getElementById('cancelEditBtn')) document.getElementById('cancelEditBtn').remove();
                 
                 showPage('heliRecordPage');
                 if (typeof searchPatients === 'function') searchPatients();
@@ -358,85 +333,58 @@ function updatePatientDetails() {
         );
     });
 }
-// ==========================================
 
-function closeDetail() { 
-    document.getElementById('detailOverlay').classList.remove('active'); 
-}
-
-function closeDetailIfOutside(e) { 
-    if (e.target === document.getElementById('detailOverlay')) closeDetail(); 
-}
+function closeDetail() { document.getElementById('detailOverlay').classList.remove('active'); }
+function closeDetailIfOutside(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
 
 function loadDashboard() { 
     const now = new Date(), today = getTodayDate();
     const ms = '01/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear(); 
     db.transaction(function(tx) { 
-        tx.executeSql('SELECT COUNT(*) as c FROM patients', [], 
-            function(tx,r){ document.getElementById('totalPatients').textContent = r.rows.item(0).c; }); 
-        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
-            function(tx,r){ document.getElementById('todayPatients').textContent = r.rows.item(0).c; }); 
-        tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date=?', [today], 
-            function(tx,r){ document.getElementById('todayTokens').textContent = r.rows.item(0).c; }); 
-        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time>=?', [ms], 
-            function(tx,r){ document.getElementById('monthPatients').textContent = r.rows.item(0).c; }); 
+        tx.executeSql('SELECT COUNT(*) as c FROM patients', [], function(tx,r){ document.getElementById('totalPatients').textContent = r.rows.item(0).c; }); 
+        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], function(tx,r){ document.getElementById('todayPatients').textContent = r.rows.item(0).c; }); 
+        tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date=?', [today], function(tx,r){ document.getElementById('todayTokens').textContent = r.rows.item(0).c; }); 
+        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time>=?', [ms], function(tx,r){ document.getElementById('monthPatients').textContent = r.rows.item(0).c; }); 
         tx.executeSql('SELECT * FROM patients', [], function(tx,r) { 
             const td = new Date(); td.setHours(0,0,0,0); 
             const plv = {}; 
             for (let i=0;i<r.rows.length;i++) { 
                 const p=r.rows.item(i), vd=parseDate(p.date_time); 
                 if(!vd) continue; 
-                const _k=(p.name||'').trim().toLowerCase()+'|'+(p.aadhar||'').trim().toLowerCase(); if(!_k.split('|')[0]&&!_k.split('|')[1]) _k=(p.phone||''); if(!plv[_k]||vd>plv[_k]) plv[_k]=vd; 
+                const _k=(p.name||'').trim().toLowerCase()+'|'+(p.aadhar||'').trim().toLowerCase(); 
+                if(!_k.split('|')[0]&&!_k.split('|')[1]) _k=(p.phone||''); 
+                if(!plv[_k]||vd>plv[_k]) plv[_k]=vd; 
             } 
-            let rc=0; 
-            Object.values(plv).forEach(d=>{ rc++; }); 
+            let rc=0; Object.values(plv).forEach(d=>{ rc++; }); 
             document.getElementById('reminderCount').textContent=rc; 
         }); 
-        tx.executeSql('SELECT COUNT(DISTINCT phone) as c FROM patients WHERE date_time LIKE ?', 
-            ['%/'+String(now.getMonth()+1).padStart(2,'0')+'/%'], 
-            function(tx,r) { 
-                const dp=now.getDate(); 
-                document.getElementById('avgPerDay').textContent = dp>0?Math.round(r.rows.item(0).c/dp*10)/10:0; 
-            }); 
+        tx.executeSql('SELECT COUNT(DISTINCT phone) as c FROM patients WHERE date_time LIKE ?', ['%/'+String(now.getMonth()+1).padStart(2,'0')+'/%'], function(tx,r) { 
+            const dp=now.getDate(); 
+            document.getElementById('avgPerDay').textContent = dp>0?Math.round(r.rows.item(0).c/dp*10)/10:0; 
+        }); 
     }); 
 }
 
 function reprintFromHealeRecord(patientId, patientName, patientPhone) {
-    console.log("🖨️ Reprint from Heale Record for ID:", patientId);
-    
     db.transaction(function(tx) {
         tx.executeSql('SELECT notes FROM visits WHERE patient_id = ? ORDER BY date_time DESC LIMIT 1', [patientId],
             function(tx, res) {
                 var notes = 'No previous notes';
-                if (res.rows.length > 0 && res.rows.item(0) && res.rows.item(0).notes) {
-                    notes = res.rows.item(0).notes;
-                }
-                
+                if (res.rows.length > 0 && res.rows.item(0) && res.rows.item(0).notes) notes = res.rows.item(0).notes;
                 var healeId = 'HEALE' + String(patientId).padStart(4, '0');
-                var today = new Date().toISOString().split('T')[0];
                 var currentTime = new Date().toISOString().replace('T', ' ').substring(0, 19);
-                
                 var modal = document.getElementById('tokenTicketModal');
-                if (!modal) {
-                    alert('❌ Token modal not found');
-                    return;
-                }
-                
+                if (!modal) { alert('❌ Token modal not found'); return; }
                 document.getElementById('ticketTokenNum').textContent = 'REPRINT';
                 document.getElementById('ticketName').textContent = patientName;
                 document.getElementById('ticketId').textContent = healeId;
                 document.getElementById('ticketPhone').textContent = patientPhone;
                 document.getElementById('ticketDate').textContent = currentTime;
                 document.getElementById('ticketNotes').textContent = notes;
-                
                 modal.classList.add('active');
                 modal.style.display = 'flex';
-                console.log("✅ Reprint modal opened");
             },
-            function(err) {
-                console.error("❌ Reprint error:", err);
-                alert('❌ Error loading notes: ' + err.message);
-            }
+            function(err) { alert('❌ Error loading notes: ' + err.message); }
         );
     });
 }
