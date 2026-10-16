@@ -9,14 +9,17 @@ function openExternalLink(url) {
 function generateMessageText(p) {
     const vd = p.date_time ? p.date_time.split(' ')[0] : 'N/A';
     const nextVisit = getNextVisitDate(parseDate(p.date_time));
-    return 'Dear ' + p.name + ',\n\nPatient ID: ' + p.id + '\nDate of Visit: ' + vd + '\n\nPlease visit again on: ' + formatDate(nextVisit) + ' (' + DAY_NAMES[nextVisit.getDay()] + ')\n\n- LAKSHMI ACUPUNCTURE';
+    const dayName = DAY_NAMES[nextVisit.getDay()];
+    const nextVisitStr = formatDate(nextVisit);
+    const healeId = generatePatientId(p.id);
+    
+    return 'Dear ' + p.name + ',\n\nHeale ID: ' + healeId + '\nDate of Visit: ' + vd + '\nYOURS NEXT VISIT on: ' + nextVisitStr + '\n(' + dayName + ') 5:00AM TO 7:00AM\n\n- CLAKSHMI ACUPUNCTURE\n- Call 9701564135';
 }
 
 function sendSMS() {
     if (!lastSavedPatient) return;
     const m = generateMessageText(lastSavedPatient);
     
-    // Try SMS plugin first
     if (window.sms) {
         window.sms.send(lastSavedPatient.phone, m, {intent: 'INTENT'},
             function() {
@@ -24,13 +27,11 @@ function sendSMS() {
                 closeModal();
             },
             function(e) {
-                // Fallback to SMS URI
                 openExternalLink('sms:' + lastSavedPatient.phone + '?body=' + encodeURIComponent(m));
                 closeModal();
             }
         );
     } else {
-        // Use SMS URI
         openExternalLink('sms:' + lastSavedPatient.phone + '?body=' + encodeURIComponent(m));
         closeModal();
     }
@@ -93,10 +94,8 @@ function sendBulkSMS(dayName) {
         const p = patients[count];
         const healeId = generatePatientId(p.id);
         
-        // EXACT MESSAGE FORMAT AS INDIVIDUAL WHATSAPP
-        const msg = "Dear " + p.name + ",\n\nHeale ID: " + healeId + "\nDate of Visit: " + fmtDateSafe(p.visitDate) + "\nYOURS NEXT VISIT on: " + fmtDateSafe(p.nextVisitDate) + "\n(" + dayName + ") 5:00AM TO 7:00AM\n\n- CLAKSHMI ACUPUNCTURE";
+        const msg = "Dear " + p.name + ",\n\nHeale ID: " + healeId + "\nDate of Visit: " + fmtDateSafe(p.visitDate) + "\nYOURS NEXT VISIT on: " + fmtDateSafe(p.nextVisitDate) + "\n(" + dayName + ") 5:00AM TO 7:00AM\n\n- CLAKSHMI ACUPUNCTURE\n- Call 9701564135";
         
-        // Use window.location.href to prevent app from exiting/crashing
         try {
             window.location.href = 'sms:' + p.phone + '?body=' + encodeURIComponent(msg);
         } catch (e) {
@@ -104,7 +103,7 @@ function sendBulkSMS(dayName) {
         }
         
         count++;
-        setTimeout(sendNext, 3000); // 3 second delay
+        setTimeout(sendNext, 3000);
     }
     sendNext();
 }
@@ -133,8 +132,7 @@ function sendBulkWhatsApp(dayName) {
         const p = patients[count];
         const healeId = generatePatientId(p.id);
         
-        // EXACT MESSAGE FORMAT AS INDIVIDUAL WHATSAPP
-        const msg = "Dear " + p.name + ",\n\nHeale ID: " + healeId + "\nDate of Visit: " + fmtDateSafe(p.visitDate) + "\nYOURS NEXT VISIT on: " + fmtDateSafe(p.nextVisitDate) + "\n(" + dayName + ") 5:00AM TO 7:00AM\n\n- CLAKSHMI ACUPUNCTURE";
+        const msg = "Dear " + p.name + ",\n\nHeale ID: " + healeId + "\nDate of Visit: " + fmtDateSafe(p.visitDate) + "\nYOURS NEXT VISIT on: " + fmtDateSafe(p.nextVisitDate) + "\n(" + dayName + ") 5:00AM TO 7:00AM\n\n- CLAKSHMI ACUPUNCTURE\n- Call 9701564135";
         
         let ph = p.phone;
         if (ph.length === 10) ph = '91' + ph;
@@ -142,7 +140,7 @@ function sendBulkWhatsApp(dayName) {
         openExternalLink('https://wa.me/' + ph + '?text=' + encodeURIComponent(msg));
         
         count++;
-        setTimeout(sendNext, 4000); // 4 second delay for WhatsApp
+        setTimeout(sendNext, 4000);
     }
     sendNext();
 }

@@ -42,14 +42,9 @@ async function printTicket() {
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem) {
             try {
                 const Filesystem = window.Capacitor.Plugins.Filesystem;
-                
-                // 1. Save to CACHE (Works on ALL Android versions, NO permissions needed)
                 await Filesystem.writeFile({ path: fileName, data: base64Data, directory: 'CACHE' });
-                
-                // 2. Get the safe content:// URI for sharing
                 const uriResult = await Filesystem.getUri({ path: fileName, directory: 'CACHE' });
                 
-                // 3. Share the file
                 if (window.Capacitor.Plugins.Share) {
                     await window.Capacitor.Plugins.Share.share({
                         title: 'Lakshmi Acupuncture Token',
@@ -82,7 +77,8 @@ function shareTicket() {
     const phone = data.phone || 'N/A';
     const date = data.date || 'N/A';
 
-    const message = `Dear ${name},\n\nPatient ID: ${id}\nDate of Visit: ${date}\nToken: ${tokenNum}\n\n- LAKSHMI ACUPUNCTURE`;
+    // EXACT TOKEN MESSAGE FORMAT REQUESTED
+    const message = `Dear ${name},\n\nHeale ID: ${id}\nDate of Visit: ${date}\nToken: ${tokenNum}\n\n- CLAKSHMI ACUPUNCTURE\n- Call 9701564135`;
 
     if (phone && phone !== 'N/A' && phone.length >= 10) {
         const cleanPhone = phone.replace(/[^0-9]/g, '');
@@ -93,7 +89,7 @@ function shareTicket() {
         }
     } else {
         if (navigator.share) {
-            navigator.share({ title: 'LAKSHMI ACUPUNCTURE Token', text: message }).catch(err => console.error(err));
+            navigator.share({ title: 'CLAKSHMI ACUPUNCTURE Token', text: message }).catch(err => console.error(err));
         } else {
             navigator.clipboard.writeText(message).then(() => alert('✅ Copied to clipboard!\n\n' + message));
         }
