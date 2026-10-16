@@ -337,28 +337,22 @@ function closeDetail() { document.getElementById('detailOverlay').classList.remo
 function closeDetailIfOutside(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
 
 // ==========================================
-// SIMPLIFIED: Count visits only from visits table
+// FIXED: Parse dates in JavaScript instead of SQL LIKE
 // ==========================================
 function loadDashboard() { 
     const now = new Date();
     const today = getTodayDate();
-    const monthNum = String(now.getMonth()+1).padStart(2,'0');
-    const year = now.getFullYear();
-    
-    console.log('🔍 Dashboard - Today:', today, '| Month:', monthNum, '| Year:', year);
+    const currentMonth = now.getMonth(); // 0-11
+    const currentYear = now.getFullYear();
     
     db.transaction(function(tx) { 
         // 1. Total Patients
         tx.executeSql('SELECT COUNT(*) as c FROM patients', [], 
-            function(tx,r){ 
-                document.getElementById('totalPatients').textContent = r.rows.item(0).c; 
-            }); 
+            function(tx,r){ document.getElementById('totalPatients').textContent = r.rows.item(0).c; }); 
         
         // 2. Today's Unique Patients
         tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
-            function(tx,r){ 
-                document.getElementById('todayPatients').textContent = r.rows.item(0).c; 
-            }); 
+            function(tx,r){ document.getElementById('todayPatients').textContent = r.rows.item(0).c; }); 
         
         // 3. Today's Tokens + Visits
         tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date = ?', [today], 
@@ -371,43 +365,32 @@ function loadDashboard() {
                     });
             }); 
         
-        // 4. THIS MONTH VISITS - ONLY FROM VISITS TABLE
-        // Try multiple date patterns to ensure matching
-        const patterns = [
-            '%/' + monthNum + '/' + year,  // %/10/2026
-            '%' + monthNum + '/' + year,   // %10/2026
-            '%-' + monthNum + '-' + year,  // %-10-2026 (in case format is different)
-            year + '-' + monthNum + '%',   // 2026-10-% (ISO format)
-            monthNum + '/' + year + '%'    // 10/2026%
-        ];
-        
-        let totalMonthVisits = 0;
-        let patternIndex = 0;
-        
-        function tryNextPattern() {
-            if (patternIndex >= patterns.length) {
-                console.log('✅ This Month Visits (from visits table):', totalMonthVisits);
-                document.getElementById('monthPatients').textContent = totalMonthVisits;
-                return;
+        // 4. THIS MONTH VISITS - Parse in JavaScript
+        tx.executeSql('SELECT date_time FROM visits', [], function(tx, allVisits) {
+            let monthVisitCount = 0;
+            
+            for (let i = 0; i < allVisits.rows.length; i++) {
+                const dateStr = allVisits.rows.item(i).date_time;
+                
+                // Parse "16/10/2026 23:59:00" format
+                if (dateStr && dateStr.includes('/')) {
+                    const parts = dateStr.split(' ')[0].split('/'); // ["16", "10", "2026"]
+                    if (parts.length === 3) {
+                        const day = parseInt(parts[0]);
+                        const month = parseInt(parts[1]) - 1; // Convert to 0-11
+                        const year = parseInt(parts[2]);
+                        
+                        // Check if this visit is in the current month/year
+                        if (month === currentMonth && year === currentYear) {
+                            monthVisitCount++;
+                        }
+                    }
+                }
             }
             
-            const pattern = patterns[patternIndex];
-            tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', [pattern], 
-                function(tx, res) {
-                    const count = res.rows.item(0).c;
-                    console.log(`  Pattern "${pattern}": ${count} visits`);
-                    
-                    if (count > 0 && totalMonthVisits === 0) {
-                        totalMonthVisits = count;
-                    }
-                    
-                    patternIndex++;
-                    tryNextPattern();
-                });
-        }
-        
-        console.log('🔍 Trying multiple date patterns for this month:');
-        tryNextPattern();
+            console.log('✅ This Month Visits (parsed in JS):', monthVisitCount);
+            document.getElementById('monthPatients').textContent = monthVisitCount;
+        });
         
         // 5. FOLLOW-UP DUE
         tx.executeSql('SELECT * FROM patients', [], function(tx, r) { 
@@ -469,14 +452,26 @@ function loadDashboard() {
             });
         }); 
         
-        // 6. Average Per Day (based on visits this month only)
-        tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', ['%/' + monthNum + '/' + year], 
-            function(tx, vRes) {
-                const total = vRes.rows.item(0).c;
-                const dp = now.getDate();
-                const avg = dp > 0 ? Math.round(total / dp * 10) / 10 : 0;
-                document.getElementById('avgPerDay').textContent = avg;
-            }); 
+        // 6. Average Per Day (based on visits this month)
+        tx.executeSql('SELECT date_time FROM visits', [], function(tx, allVisits) {
+            let monthVisitCount = 0;
+            for (let i = 0; i < allVisits.rows.length; i++) {
+                const dateStr = allVisits.rows.item(i).date_time;
+                if (dateStr && dateStr.includes('/')) {
+                    const parts = dateStr.split(' ')[0].split('/');
+                    if (parts.length === 3) {
+                        const month = parseInt(parts[1]) - 1;
+                        const year = parseInt(parts[2]);
+                        if (month === currentMonth && year === currentYear) {
+                            monthVisitCount++;
+                        }
+                    }
+                }
+            }
+            const dp = now.getDate();
+            const avg = dp > 0 ? Math.round(monthVisitCount / dp * 10) / 10 : 0;
+            document.getElementById('avgPerDay').textContent = avg;
+        }); 
     }); 
 }
 // ==========================================
