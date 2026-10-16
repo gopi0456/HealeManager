@@ -5,8 +5,9 @@ function fmtDate(d) {
     return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
 }
 
+// FIXED: Added "- Call 9701564135" to match your exact requested format
 function getReminderMessage(name, healeId, visitDate, nextVisitDate, dayName) {
-    return "Dear " + name + ",\n\nHeale ID: " + healeId + "\nDate of Visit: " + fmtDate(visitDate) + "\nYOURS NEXT VISIT on: " + fmtDate(nextVisitDate) + "\n(" + dayName + ") 5:00AM TO 7:00AM\n\n- CLAKSHMI ACUPUNCTURE";
+    return "Dear " + name + ",\n\nHeale ID: " + healeId + "\nDate of Visit: " + fmtDate(visitDate) + "\nYOURS NEXT VISIT on: " + fmtDate(nextVisitDate) + "\n(" + dayName + ") 5:00AM TO 7:00AM\n\n- CLAKSHMI ACUPUNCTURE\n- Call 9701564135";
 }
 
 function loadReminders() {
@@ -83,13 +84,9 @@ function buildReminderUI(patientData) {
         var baseDate = pd.visitDate || pd.lastDate;
         if (!baseDate) return;
 
-        // Bulletproof calculation: ignores time/timezone to prevent 1-day shifts
-        // JavaScript automatically handles 30/31 day month rollovers perfectly here
         var nextVisitDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + 7);
-
         var daysUntilVisit = Math.floor((nextVisitDate - today) / 86400000);
         
-        // Safe day name calculation
         var dayNamesArr = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         var dayName = dayNamesArr[nextVisitDate.getDay()];
             
@@ -166,13 +163,6 @@ function filterReminders(selectedDay) {
     }
 }
 
-// ==========================================
-// BULLETPROOF MANUAL TAP QUEUE SYSTEM
-// ==========================================
-
-// ==========================================
-// FINAL BULK TAP-QUEUE SYSTEM
-// ==========================================
 function showBulkQueue(day, type) {
     var pts = window.reminderData[day] || [];
     if (!pts || pts.length === 0) {
@@ -184,7 +174,6 @@ function showBulkQueue(day, type) {
         return;
     }
 
-    // Group by phone number so family members sharing a number get ONE combined message
     var grouped = {};
     pts.forEach(function(pt) {
         var cleanPhone = String(pt.phone).replace(/\D/g, '');
@@ -216,7 +205,6 @@ function showBulkQueue(day, type) {
 
         var patientNames = patients.map(function(p) { return p.name; }).join(' & ');
 
-        // REAL <a> TAG - 100% WebView safe, requires physical tap
         html += '<a href="' + url + '" target="_blank" style="display:block; background:' + (type === 'whatsapp' ? '#10b981' : '#3b82f6') + '; color:white; padding:15px; border-radius:8px; text-decoration:none; font-weight:bold; text-align:center; margin-bottom:12px; font-size:16px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">';
         html += '💬 Send to: ' + patientNames + '<br><span style="font-size:14px; font-weight:normal; opacity:0.9;">' + phone + '</span>';
         html += '</a>';
