@@ -337,51 +337,59 @@ function closeDetail() { document.getElementById('detailOverlay').classList.remo
 function closeDetailIfOutside(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
 
 // ==========================================
-// FIXED DASHBOARD WITH DEBUG LOGGING
+// FIXED: Count ALL records (not unique patients)
 // ==========================================
 function loadDashboard() { 
     const now = new Date();
     const today = getTodayDate();
     const monthYear = '/' + String(now.getMonth()+1).padStart(2,'0') + '/' + now.getFullYear();
     
-    console.log('🔍 Dashboard Debug - Today:', today, '| Month/Year pattern:', '%' + monthYear);
+    console.log('🔍 Dashboard Debug - Today:', today, '| Month pattern:', '%' + monthYear);
     
     db.transaction(function(tx) { 
         // 1. Total Patients
         tx.executeSql('SELECT COUNT(*) as c FROM patients', [], 
-            function(tx,r){ document.getElementById('totalPatients').textContent = r.rows.item(0).c; }); 
+            function(tx,r){ 
+                const count = r.rows.item(0).c;
+                console.log('📊 Total Patients:', count);
+                document.getElementById('totalPatients').textContent = count; 
+            }); 
         
-        // 2. Today's Unique Patients
+        // 2. Today's Unique Patients (new registrations today)
         tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
-            function(tx,r){ document.getElementById('todayPatients').textContent = r.rows.item(0).c; }); 
+            function(tx,r){ 
+                const count = r.rows.item(0).c;
+                console.log('📊 Today Unique Patients:', count);
+                document.getElementById('todayPatients').textContent = count; 
+            }); 
         
-        // 3. Today's Tokens + Today's Visits
-        tx.executeSql(`
-            SELECT 
-                (SELECT COUNT(*) FROM tokens WHERE token_date = ?) as t,
-                (SELECT COUNT(*) FROM visits WHERE date_time LIKE ?) as v
-        `, [today, today + '%'], function(tx, r) { 
-            const tokens = r.rows.item(0).t;
-            const visits = r.rows.item(0).v;
-            const total = tokens + visits;
-            console.log('📊 Today - Tokens:', tokens, '| Visits:', visits, '| Total:', total);
-            document.getElementById('todayTokens').textContent = total; 
-        }); 
+        // 3. Today's Tokens + Today's Visits (ALL records)
+        tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date = ?', [today], 
+            function(tx, tRes) { 
+                const tokenCount = tRes.rows.item(0).c;
+                tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', [today + '%'], 
+                    function(tx, vRes) {
+                        const visitCount = vRes.rows.item(0).c;
+                        const total = tokenCount + visitCount;
+                        console.log('📊 Today - Tokens:', tokenCount, '| Visits:', visitCount, '| Total:', total);
+                        document.getElementById('todayTokens').textContent = total;
+                    });
+            }); 
         
-        // 4. THIS MONTH VISITS = Visits + Tokens for the month
-        tx.executeSql(`
-            SELECT 
-                (SELECT COUNT(*) FROM visits WHERE date_time LIKE ?) as v,
-                (SELECT COUNT(*) FROM tokens WHERE token_date LIKE ?) as t
-        `, ['%' + monthYear, '%' + monthYear], function(tx, r) { 
-            const visits = r.rows.item(0).v;
-            const tokens = r.rows.item(0).t;
-            const total = visits + tokens;
-            console.log('📊 This Month - Visits:', visits, '| Tokens:', tokens, '| Total:', total);
-            document.getElementById('monthPatients').textContent = total; 
-        }); 
+        // 4. THIS MONTH VISITS = ALL visits + ALL tokens this month (NOT unique!)
+        tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', ['%' + monthYear], 
+            function(tx, vRes) {
+                const visitCount = vRes.rows.item(0).c;
+                tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date LIKE ?', ['%' + monthYear], 
+                    function(tx, tRes) {
+                        const tokenCount = tRes.rows.item(0).c;
+                        const total = visitCount + tokenCount;
+                        console.log('📊 This Month - Visits:', visitCount, '| Tokens:', tokenCount, '| Total:', total);
+                        document.getElementById('monthPatients').textContent = total;
+                    });
+            }); 
         
-        // 5. FOLLOW-UP DUE
+        // 5. FOLLOW-UP DUE (patients whose last activity was 7+ days ago)
         tx.executeSql('SELECT * FROM patients', [], function(tx, r) { 
             const todayDate = new Date(); 
             todayDate.setHours(0, 0, 0, 0);
@@ -442,15 +450,20 @@ function loadDashboard() {
             });
         }); 
         
-        // 6. Average Per Day
-        tx.executeSql(`
-            SELECT 
-                (SELECT COUNT(*) FROM visits WHERE date_time LIKE ?) + 
-                (SELECT COUNT(*) FROM tokens WHERE token_date LIKE ?) as c
-        `, ['%' + monthYear, '%' + monthYear], function(tx, r) { 
-            const dp = now.getDate(); 
-            document.getElementById('avgPerDay').textContent = dp > 0 ? Math.round(r.rows.item(0).c / dp * 10) / 10 : 0; 
-        }); 
+        // 6. Average Per Day (based on ALL visits + tokens this month)
+        tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', ['%' + monthYear], 
+            function(tx, vRes) {
+                const visitCount = vRes.rows.item(0).c;
+                tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date LIKE ?', ['%' + monthYear], 
+                    function(tx, tRes) {
+                        const tokenCount = tRes.rows.item(0).c;
+                        const total = visitCount + tokenCount;
+                        const dp = now.getDate();
+                        const avg = dp > 0 ? Math.round(total / dp * 10) / 10 : 0;
+                        console.log('📊 Avg/Day - Total:', total, '| Days:', dp, '| Avg:', avg);
+                        document.getElementById('avgPerDay').textContent = avg;
+                    });
+            }); 
     }); 
 }
 // ==========================================
