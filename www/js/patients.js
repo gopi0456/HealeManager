@@ -337,175 +337,146 @@ function closeDetail() { document.getElementById('detailOverlay').classList.remo
 function closeDetailIfOutside(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
 
 // ==========================================
-// DIAGNOSTIC VERSION - Shows exactly what's in the database
+// SIMPLIFIED: Count visits only from visits table
 // ==========================================
 function loadDashboard() { 
     const now = new Date();
     const today = getTodayDate();
-    const monthYear = '/' + String(now.getMonth()+1).padStart(2,'0') + '/' + now.getFullYear();
+    const monthNum = String(now.getMonth()+1).padStart(2,'0');
+    const year = now.getFullYear();
     
-    console.log('========================================');
-    console.log('🔍 DASHBOARD DIAGNOSTIC START');
-    console.log('========================================');
-    console.log('Today:', today);
-    console.log('Month pattern:', '%' + monthYear);
-    console.log('========================================');
+    console.log('🔍 Dashboard - Today:', today, '| Month:', monthNum, '| Year:', year);
     
     db.transaction(function(tx) { 
-        // DIAGNOSTIC: Show ALL data in visits and tokens tables
-        console.log('📊 RAW DATABASE CONTENTS:');
+        // 1. Total Patients
+        tx.executeSql('SELECT COUNT(*) as c FROM patients', [], 
+            function(tx,r){ 
+                document.getElementById('totalPatients').textContent = r.rows.item(0).c; 
+            }); 
         
-        tx.executeSql('SELECT * FROM visits', [], function(tx, allVisits) {
-            console.log('Total visits in DB:', allVisits.rows.length);
-            for (let i = 0; i < allVisits.rows.length; i++) {
-                const v = allVisits.rows.item(i);
-                console.log(`  Visit ${i+1}: ID=${v.id}, Patient=${v.patient_id}, Date="${v.date_time}"`);
+        // 2. Today's Unique Patients
+        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
+            function(tx,r){ 
+                document.getElementById('todayPatients').textContent = r.rows.item(0).c; 
+            }); 
+        
+        // 3. Today's Tokens + Visits
+        tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date = ?', [today], 
+            function(tx, tRes) { 
+                const tokenCount = tRes.rows.item(0).c;
+                tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', [today + '%'], 
+                    function(tx, vRes) {
+                        const visitCount = vRes.rows.item(0).c;
+                        document.getElementById('todayTokens').textContent = tokenCount + visitCount;
+                    });
+            }); 
+        
+        // 4. THIS MONTH VISITS - ONLY FROM VISITS TABLE
+        // Try multiple date patterns to ensure matching
+        const patterns = [
+            '%/' + monthNum + '/' + year,  // %/10/2026
+            '%' + monthNum + '/' + year,   // %10/2026
+            '%-' + monthNum + '-' + year,  // %-10-2026 (in case format is different)
+            year + '-' + monthNum + '%',   // 2026-10-% (ISO format)
+            monthNum + '/' + year + '%'    // 10/2026%
+        ];
+        
+        let totalMonthVisits = 0;
+        let patternIndex = 0;
+        
+        function tryNextPattern() {
+            if (patternIndex >= patterns.length) {
+                console.log('✅ This Month Visits (from visits table):', totalMonthVisits);
+                document.getElementById('monthPatients').textContent = totalMonthVisits;
+                return;
             }
             
-            tx.executeSql('SELECT * FROM tokens', [], function(tx, allTokens) {
-                console.log('Total tokens in DB:', allTokens.rows.length);
-                for (let i = 0; i < allTokens.rows.length; i++) {
-                    const t = allTokens.rows.item(i);
-                    console.log(`  Token ${i+1}: ID=${t.id}, Patient=${t.patient_id}, Date="${t.token_date}"`);
+            const pattern = patterns[patternIndex];
+            tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', [pattern], 
+                function(tx, res) {
+                    const count = res.rows.item(0).c;
+                    console.log(`  Pattern "${pattern}": ${count} visits`);
+                    
+                    if (count > 0 && totalMonthVisits === 0) {
+                        totalMonthVisits = count;
+                    }
+                    
+                    patternIndex++;
+                    tryNextPattern();
+                });
+        }
+        
+        console.log('🔍 Trying multiple date patterns for this month:');
+        tryNextPattern();
+        
+        // 5. FOLLOW-UP DUE
+        tx.executeSql('SELECT * FROM patients', [], function(tx, r) { 
+            const todayDate = new Date(); 
+            todayDate.setHours(0, 0, 0, 0);
+            const latestActivity = {}; 
+            
+            for (let i = 0; i < r.rows.length; i++) { 
+                const p = r.rows.item(i);
+                const regDate = parseDate(p.date_time); 
+                if (!regDate) continue; 
+                const _k = (p.name || '').trim().toLowerCase() + '|' + (p.aadhar || '').trim().toLowerCase(); 
+                if (!_k.split('|')[0] && !_k.split('|')[1]) _k = (p.phone || ''); 
+                if (!latestActivity[_k] || regDate > latestActivity[_k]) {
+                    latestActivity[_k] = regDate;
+                }
+            } 
+            
+            tx.executeSql('SELECT patient_id, date_time FROM visits', [], function(tx2, vRes) {
+                const idToKey = {};
+                for (let i = 0; i < r.rows.length; i++) {
+                    const p = r.rows.item(i);
+                    const _k = (p.name || '').trim().toLowerCase() + '|' + (p.aadhar || '').trim().toLowerCase();
+                    if (!_k.split('|')[0] && !_k.split('|')[1]) _k = (p.phone || '');
+                    idToKey[p.id] = _k;
                 }
                 
-                // Now run the actual counting queries
-                console.log('========================================');
-                console.log('🔍 COUNTING QUERIES:');
-                console.log('========================================');
+                for (let j = 0; j < vRes.rows.length; j++) {
+                    const v = vRes.rows.item(j);
+                    const key = idToKey[v.patient_id];
+                    if (!key) continue;
+                    const vd = parseDate(v.date_time);
+                    if (vd && (!latestActivity[key] || vd > latestActivity[key])) {
+                        latestActivity[key] = vd;
+                    }
+                }
                 
-                // 1. Total Patients
-                tx.executeSql('SELECT COUNT(*) as c FROM patients', [], 
-                    function(tx,r){ 
-                        const count = r.rows.item(0).c;
-                        console.log('✅ Total Patients:', count);
-                        document.getElementById('totalPatients').textContent = count; 
-                    }); 
-                
-                // 2. Today's Unique Patients
-                tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
-                    function(tx,r){ 
-                        const count = r.rows.item(0).c;
-                        console.log('✅ Today Unique Patients:', count);
-                        document.getElementById('todayPatients').textContent = count; 
-                    }); 
-                
-                // 3. Today's TOTAL
-                const todayPattern = today + '%';
-                console.log('🔎 Query: SELECT COUNT(*) FROM visits WHERE date_time LIKE "' + todayPattern + '"');
-                tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', [todayPattern], 
-                    function(tx, vRes) {
-                        const visitCount = vRes.rows.item(0).c;
-                        console.log('  → Visits today:', visitCount);
-                        
-                        tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date = ?', [today], 
-                            function(tx, tRes) {
-                                const tokenCount = tRes.rows.item(0).c;
-                                console.log('  → Tokens today:', tokenCount);
-                                const total = visitCount + tokenCount;
-                                console.log('✅ Today TOTAL:', total);
-                                document.getElementById('todayTokens').textContent = total;
-                            });
-                    }); 
-                
-                // 4. THIS MONTH TOTAL
-                const monthPattern = '%' + monthYear;
-                console.log('🔎 Query: SELECT COUNT(*) FROM visits WHERE date_time LIKE "' + monthPattern + '"');
-                tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', [monthPattern], 
-                    function(tx, vRes) {
-                        const visitCount = vRes.rows.item(0).c;
-                        console.log('  → Visits this month:', visitCount);
-                        
-                        tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date LIKE ?', [monthPattern], 
-                            function(tx, tRes) {
-                                const tokenCount = tRes.rows.item(0).c;
-                                console.log('  → Tokens this month:', tokenCount);
-                                const total = visitCount + tokenCount;
-                                console.log('✅ This Month TOTAL:', total);
-                                document.getElementById('monthPatients').textContent = total;
-                            });
-                    }); 
-                
-                // 5. FOLLOW-UP DUE (simplified for now)
-                tx.executeSql('SELECT * FROM patients', [], function(tx, r) { 
-                    const todayDate = new Date(); 
-                    todayDate.setHours(0, 0, 0, 0);
-                    const latestActivity = {}; 
+                tx.executeSql('SELECT patient_id, token_date FROM tokens', [], function(tx3, tRes) {
+                    for (let k = 0; k < tRes.rows.length; k++) {
+                        const t = tRes.rows.item(k);
+                        const key = idToKey[t.patient_id];
+                        if (!key) continue;
+                        const td = parseDate(t.token_date);
+                        if (td && (!latestActivity[key] || td > latestActivity[key])) {
+                            latestActivity[key] = td;
+                        }
+                    }
                     
-                    for (let i = 0; i < r.rows.length; i++) { 
-                        const p = r.rows.item(i);
-                        const regDate = parseDate(p.date_time); 
-                        if (!regDate) continue; 
-                        const _k = (p.name || '').trim().toLowerCase() + '|' + (p.aadhar || '').trim().toLowerCase(); 
-                        if (!_k.split('|')[0] && !_k.split('|')[1]) _k = (p.phone || ''); 
-                        if (!latestActivity[_k] || regDate > latestActivity[_k]) {
-                            latestActivity[_k] = regDate;
+                    let rc = 0; 
+                    Object.values(latestActivity).forEach(lastDate => { 
+                        const nextVisit = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate() + 7);
+                        nextVisit.setHours(0, 0, 0, 0);
+                        if (nextVisit <= todayDate) {
+                            rc++; 
                         }
-                    } 
-                    
-                    tx.executeSql('SELECT patient_id, date_time FROM visits', [], function(tx2, vRes) {
-                        const idToKey = {};
-                        for (let i = 0; i < r.rows.length; i++) {
-                            const p = r.rows.item(i);
-                            const _k = (p.name || '').trim().toLowerCase() + '|' + (p.aadhar || '').trim().toLowerCase();
-                            if (!_k.split('|')[0] && !_k.split('|')[1]) _k = (p.phone || '');
-                            idToKey[p.id] = _k;
-                        }
-                        
-                        for (let j = 0; j < vRes.rows.length; j++) {
-                            const v = vRes.rows.item(j);
-                            const key = idToKey[v.patient_id];
-                            if (!key) continue;
-                            const vd = parseDate(v.date_time);
-                            if (vd && (!latestActivity[key] || vd > latestActivity[key])) {
-                                latestActivity[key] = vd;
-                            }
-                        }
-                        
-                        tx.executeSql('SELECT patient_id, token_date FROM tokens', [], function(tx3, tRes) {
-                            for (let k = 0; k < tRes.rows.length; k++) {
-                                const t = tRes.rows.item(k);
-                                const key = idToKey[t.patient_id];
-                                if (!key) continue;
-                                const td = parseDate(t.token_date);
-                                if (td && (!latestActivity[key] || td > latestActivity[key])) {
-                                    latestActivity[key] = td;
-                                }
-                            }
-                            
-                            let rc = 0; 
-                            Object.values(latestActivity).forEach(lastDate => { 
-                                const nextVisit = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate() + 7);
-                                nextVisit.setHours(0, 0, 0, 0);
-                                if (nextVisit <= todayDate) {
-                                    rc++; 
-                                }
-                            }); 
-                            console.log('✅ Follow-up Due:', rc);
-                            document.getElementById('reminderCount').textContent = rc; 
-                        });
-                    });
-                }); 
-                
-                // 6. Average Per Day
-                tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', [monthPattern], 
-                    function(tx, vRes) {
-                        const visitCount = vRes.rows.item(0).c;
-                        tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date LIKE ?', [monthPattern], 
-                            function(tx, tRes) {
-                                const tokenCount = tRes.rows.item(0).c;
-                                const total = visitCount + tokenCount;
-                                const dp = now.getDate();
-                                const avg = dp > 0 ? Math.round(total / dp * 10) / 10 : 0;
-                                console.log('✅ Avg/Day:', avg);
-                                document.getElementById('avgPerDay').textContent = avg;
-                                console.log('========================================');
-                                console.log('🔍 DASHBOARD DIAGNOSTIC COMPLETE');
-                                console.log('========================================');
-                            });
                     }); 
+                    document.getElementById('reminderCount').textContent = rc; 
+                });
             });
-        });
+        }); 
+        
+        // 6. Average Per Day (based on visits this month only)
+        tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', ['%/' + monthNum + '/' + year], 
+            function(tx, vRes) {
+                const total = vRes.rows.item(0).c;
+                const dp = now.getDate();
+                const avg = dp > 0 ? Math.round(total / dp * 10) / 10 : 0;
+                document.getElementById('avgPerDay').textContent = avg;
+            }); 
     }); 
 }
 // ==========================================
