@@ -337,7 +337,7 @@ function closeDetail() { document.getElementById('detailOverlay').classList.remo
 function closeDetailIfOutside(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
 
 // ==========================================
-// FIXED: Count ALL records (not unique patients)
+// FIXED: Count TOTAL records (NOT unique patients)
 // ==========================================
 function loadDashboard() { 
     const now = new Date();
@@ -359,24 +359,24 @@ function loadDashboard() {
         tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
             function(tx,r){ 
                 const count = r.rows.item(0).c;
-                console.log('📊 Today Unique Patients:', count);
+                console.log('📊 Today Unique Patients (new registrations):', count);
                 document.getElementById('todayPatients').textContent = count; 
             }); 
         
-        // 3. Today's Tokens + Today's Visits (ALL records)
-        tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date = ?', [today], 
-            function(tx, tRes) { 
-                const tokenCount = tRes.rows.item(0).c;
-                tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', [today + '%'], 
-                    function(tx, vRes) {
-                        const visitCount = vRes.rows.item(0).c;
-                        const total = tokenCount + visitCount;
-                        console.log('📊 Today - Tokens:', tokenCount, '| Visits:', visitCount, '| Total:', total);
+        // 3. Today's TOTAL = ALL visits today + ALL tokens today (NOT unique!)
+        tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', [today + '%'], 
+            function(tx, vRes) {
+                const visitCount = vRes.rows.item(0).c;
+                tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date = ?', [today], 
+                    function(tx, tRes) {
+                        const tokenCount = tRes.rows.item(0).c;
+                        const total = visitCount + tokenCount;
+                        console.log('📊 Today TOTAL - Visits:', visitCount, '| Tokens:', tokenCount, '| TOTAL:', total);
                         document.getElementById('todayTokens').textContent = total;
                     });
             }); 
         
-        // 4. THIS MONTH VISITS = ALL visits + ALL tokens this month (NOT unique!)
+        // 4. THIS MONTH TOTAL = ALL visits + ALL tokens this month (NOT unique!)
         tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', ['%' + monthYear], 
             function(tx, vRes) {
                 const visitCount = vRes.rows.item(0).c;
@@ -384,7 +384,7 @@ function loadDashboard() {
                     function(tx, tRes) {
                         const tokenCount = tRes.rows.item(0).c;
                         const total = visitCount + tokenCount;
-                        console.log('📊 This Month - Visits:', visitCount, '| Tokens:', tokenCount, '| Total:', total);
+                        console.log('📊 This Month TOTAL - Visits:', visitCount, '| Tokens:', tokenCount, '| TOTAL:', total);
                         document.getElementById('monthPatients').textContent = total;
                     });
             }); 
@@ -450,7 +450,7 @@ function loadDashboard() {
             });
         }); 
         
-        // 6. Average Per Day (based on ALL visits + tokens this month)
+        // 6. Average Per Day (based on TOTAL visits + tokens this month)
         tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', ['%' + monthYear], 
             function(tx, vRes) {
                 const visitCount = vRes.rows.item(0).c;
