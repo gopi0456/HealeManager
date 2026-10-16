@@ -337,13 +337,12 @@ function closeDetail() { document.getElementById('detailOverlay').classList.remo
 function closeDetailIfOutside(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
 
 // ==========================================
-// UPDATED DASHBOARD COUNTING LOGIC
+// SMART DASHBOARD COUNTING - Uses BOTH visits and tokens
 // ==========================================
 function loadDashboard() { 
     const now = new Date();
     const today = getTodayDate();
     const monthYear = '/' + String(now.getMonth()+1).padStart(2,'0') + '/' + now.getFullYear();
-    const monthStart = '01' + monthYear;
     
     db.transaction(function(tx) { 
         // 1. Total Patients
@@ -354,7 +353,7 @@ function loadDashboard() {
         tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
             function(tx,r){ document.getElementById('todayPatients').textContent = r.rows.item(0).c; }); 
         
-        // 3. Today's Tokens + Today's Visits (total patient interactions today)
+        // 3. Today's Tokens + Today's Visits
         tx.executeSql(`
             SELECT 
                 (SELECT COUNT(*) FROM tokens WHERE token_date = ?) + 
@@ -363,38 +362,79 @@ function loadDashboard() {
             document.getElementById('todayTokens').textContent = r.rows.item(0).c; 
         }); 
         
-        // 4. THIS MONTH VISITS (changed from unique patients to actual visits)
+        // 4. THIS MONTH VISITS (from visits table only)
         tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', 
             ['%' + monthYear], 
             function(tx,r){ document.getElementById('monthPatients').textContent = r.rows.item(0).c; }); 
         
-        // 5. Reminder Count (patients whose 7-day follow-up is today or overdue)
+        // 5. FOLLOW-UP DUE - Uses BOTH visits AND tokens to find each patient's latest activity
         tx.executeSql('SELECT * FROM patients', [], function(tx, r) { 
             const todayDate = new Date(); 
             todayDate.setHours(0, 0, 0, 0);
-            const plv = {}; 
             
+            // Map to store each unique patient's LATEST activity date
+            const latestActivity = {}; 
+            
+            // First, collect all patient IDs and their registration dates
             for (let i = 0; i < r.rows.length; i++) { 
                 const p = r.rows.item(i);
-                const vd = parseDate(p.date_time); 
-                if (!vd) continue; 
+                const regDate = parseDate(p.date_time); 
+                if (!regDate) continue; 
                 const _k = (p.name || '').trim().toLowerCase() + '|' + (p.aadhar || '').trim().toLowerCase(); 
                 if (!_k.split('|')[0] && !_k.split('|')[1]) _k = (p.phone || ''); 
-                if (!plv[_k] || vd > plv[_k]) plv[_k] = vd; 
+                if (!latestActivity[_k] || regDate > latestActivity[_k]) {
+                    latestActivity[_k] = regDate;
+                }
             } 
             
-            let rc = 0; 
-            Object.values(plv).forEach(d => { 
-                const nextVisit = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7);
-                nextVisit.setHours(0, 0, 0, 0);
-                if (nextVisit <= todayDate) {
-                    rc++; 
+            // Now, update with visit dates (if any)
+            tx.executeSql('SELECT patient_id, date_time FROM visits', [], function(tx2, vRes) {
+                // Build patient_id to key map
+                const idToKey = {};
+                for (let i = 0; i < r.rows.length; i++) {
+                    const p = r.rows.item(i);
+                    const _k = (p.name || '').trim().toLowerCase() + '|' + (p.aadhar || '').trim().toLowerCase();
+                    if (!_k.split('|')[0] && !_k.split('|')[1]) _k = (p.phone || '');
+                    idToKey[p.id] = _k;
                 }
-            }); 
-            document.getElementById('reminderCount').textContent = rc; 
+                
+                for (let j = 0; j < vRes.rows.length; j++) {
+                    const v = vRes.rows.item(j);
+                    const key = idToKey[v.patient_id];
+                    if (!key) continue;
+                    const vd = parseDate(v.date_time);
+                    if (vd && (!latestActivity[key] || vd > latestActivity[key])) {
+                        latestActivity[key] = vd;
+                    }
+                }
+                
+                // Also update with token dates (if any)
+                tx.executeSql('SELECT patient_id, token_date FROM tokens', [], function(tx3, tRes) {
+                    for (let k = 0; k < tRes.rows.length; k++) {
+                        const t = tRes.rows.item(k);
+                        const key = idToKey[t.patient_id];
+                        if (!key) continue;
+                        const td = parseDate(t.token_date);
+                        if (td && (!latestActivity[key] || td > latestActivity[key])) {
+                            latestActivity[key] = td;
+                        }
+                    }
+                    
+                    // Now count patients whose latest activity was 7+ days ago
+                    let rc = 0; 
+                    Object.values(latestActivity).forEach(lastDate => { 
+                        const nextVisit = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate() + 7);
+                        nextVisit.setHours(0, 0, 0, 0);
+                        if (nextVisit <= todayDate) {
+                            rc++; 
+                        }
+                    }); 
+                    document.getElementById('reminderCount').textContent = rc; 
+                });
+            });
         }); 
         
-        // 6. Average Per Day (based on visits this month, not registrations)
+        // 6. Average Per Day (based on visits this month)
         tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', 
             ['%' + monthYear], 
             function(tx, r) { 
