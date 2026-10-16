@@ -224,7 +224,6 @@ function showPatientDetail(patientId) {
                         }
                         html += `</div></div>`;
                         
-                        // ONLY the Edit button here. The Close button is in the modal wrapper below.
                         html += `<button class="btn-edit" onclick="openEditPatient(${patientId})" style="width:100%; padding:12px; background:#f59e0b; color:white; border:none; border-radius:6px; font-weight:bold; font-size:16px; cursor:pointer; margin-top:15px;">✏️ Edit Patient Details</button>`;
                         
                         let modal = document.getElementById('patientDetailModal');
@@ -337,33 +336,73 @@ function updatePatientDetails() {
 function closeDetail() { document.getElementById('detailOverlay').classList.remove('active'); }
 function closeDetailIfOutside(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
 
+// ==========================================
+// UPDATED DASHBOARD COUNTING LOGIC
+// ==========================================
 function loadDashboard() { 
-    const now = new Date(), today = getTodayDate();
+    const now = new Date();
+    const today = getTodayDate();
     const ms = '01/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear(); 
+    
     db.transaction(function(tx) { 
-        tx.executeSql('SELECT COUNT(*) as c FROM patients', [], function(tx,r){ document.getElementById('totalPatients').textContent = r.rows.item(0).c; }); 
-        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], function(tx,r){ document.getElementById('todayPatients').textContent = r.rows.item(0).c; }); 
-        tx.executeSql('SELECT COUNT(*) as c FROM tokens WHERE token_date=?', [today], function(tx,r){ document.getElementById('todayTokens').textContent = r.rows.item(0).c; }); 
-        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time>=?', [ms], function(tx,r){ document.getElementById('monthPatients').textContent = r.rows.item(0).c; }); 
-        tx.executeSql('SELECT * FROM patients', [], function(tx,r) { 
-            const td = new Date(); td.setHours(0,0,0,0); 
+        // 1. Total Patients
+        tx.executeSql('SELECT COUNT(*) as c FROM patients', [], 
+            function(tx,r){ document.getElementById('totalPatients').textContent = r.rows.item(0).c; }); 
+        
+        // 2. Today's Unique Patients
+        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
+            function(tx,r){ document.getElementById('todayPatients').textContent = r.rows.item(0).c; }); 
+        
+        // 3. Today's Tokens + Today's Visits (SUM of both)
+        tx.executeSql(`
+            SELECT 
+                (SELECT COUNT(*) FROM tokens WHERE token_date = ?) + 
+                (SELECT COUNT(*) FROM visits WHERE date_time LIKE ?) as c
+        `, [today, today + '%'], function(tx, r) { 
+            document.getElementById('todayTokens').textContent = r.rows.item(0).c; 
+        }); 
+        
+        // 4. Monthly Patients
+        tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time>=?', [ms], 
+            function(tx,r){ document.getElementById('monthPatients').textContent = r.rows.item(0).c; }); 
+        
+        // 5. Reminder Count (FIXED: Only counts patients whose 7-day follow-up is today or overdue)
+        tx.executeSql('SELECT * FROM patients', [], function(tx, r) { 
+            const todayDate = new Date(); 
+            todayDate.setHours(0, 0, 0, 0);
             const plv = {}; 
-            for (let i=0;i<r.rows.length;i++) { 
-                const p=r.rows.item(i), vd=parseDate(p.date_time); 
-                if(!vd) continue; 
-                const _k=(p.name||'').trim().toLowerCase()+'|'+(p.aadhar||'').trim().toLowerCase(); 
-                if(!_k.split('|')[0]&&!_k.split('|')[1]) _k=(p.phone||''); 
-                if(!plv[_k]||vd>plv[_k]) plv[_k]=vd; 
+            
+            // Group by unique patient and find their latest visit date
+            for (let i = 0; i < r.rows.length; i++) { 
+                const p = r.rows.item(i);
+                const vd = parseDate(p.date_time); 
+                if (!vd) continue; 
+                const _k = (p.name || '').trim().toLowerCase() + '|' + (p.aadhar || '').trim().toLowerCase(); 
+                if (!_k.split('|')[0] && !_k.split('|')[1]) _k = (p.phone || ''); 
+                if (!plv[_k] || vd > plv[_k]) plv[_k] = vd; 
             } 
-            let rc=0; Object.values(plv).forEach(d=>{ rc++; }); 
-            document.getElementById('reminderCount').textContent=rc; 
+            
+            // Count how many unique patients are due or overdue for their 7-day follow-up
+            let rc = 0; 
+            Object.values(plv).forEach(d => { 
+                const nextVisit = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7);
+                nextVisit.setHours(0, 0, 0, 0);
+                if (nextVisit <= todayDate) {
+                    rc++; 
+                }
+            }); 
+            document.getElementById('reminderCount').textContent = rc; 
         }); 
-        tx.executeSql('SELECT COUNT(DISTINCT phone) as c FROM patients WHERE date_time LIKE ?', ['%/'+String(now.getMonth()+1).padStart(2,'0')+'/%'], function(tx,r) { 
-            const dp=now.getDate(); 
-            document.getElementById('avgPerDay').textContent = dp>0?Math.round(r.rows.item(0).c/dp*10)/10:0; 
-        }); 
+        
+        // 6. Average Per Day
+        tx.executeSql('SELECT COUNT(DISTINCT phone) as c FROM patients WHERE date_time LIKE ?', 
+            ['%/'+String(now.getMonth()+1).padStart(2,'0')+'/%'], function(tx, r) { 
+                const dp = now.getDate(); 
+                document.getElementById('avgPerDay').textContent = dp > 0 ? Math.round(r.rows.item(0).c / dp * 10) / 10 : 0; 
+            }); 
     }); 
 }
+// ==========================================
 
 function reprintFromHealeRecord(patientId, patientName, patientPhone) {
     db.transaction(function(tx) {
