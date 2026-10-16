@@ -337,7 +337,7 @@ function closeDetail() { document.getElementById('detailOverlay').classList.remo
 function closeDetailIfOutside(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
 
 // ==========================================
-// SMART DASHBOARD COUNTING - Uses BOTH visits and tokens
+// FIXED DASHBOARD - Counts BOTH visits AND tokens for the month
 // ==========================================
 function loadDashboard() { 
     const now = new Date();
@@ -349,7 +349,7 @@ function loadDashboard() {
         tx.executeSql('SELECT COUNT(*) as c FROM patients', [], 
             function(tx,r){ document.getElementById('totalPatients').textContent = r.rows.item(0).c; }); 
         
-        // 2. Today's Unique Patients (new registrations today)
+        // 2. Today's Unique Patients
         tx.executeSql('SELECT COUNT(*) as c FROM patients WHERE date_time LIKE ?', [today+'%'], 
             function(tx,r){ document.getElementById('todayPatients').textContent = r.rows.item(0).c; }); 
         
@@ -362,20 +362,21 @@ function loadDashboard() {
             document.getElementById('todayTokens').textContent = r.rows.item(0).c; 
         }); 
         
-        // 4. THIS MONTH VISITS (from visits table only)
-        tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', 
-            ['%' + monthYear], 
-            function(tx,r){ document.getElementById('monthPatients').textContent = r.rows.item(0).c; }); 
+        // 4. THIS MONTH VISITS = Visits + Tokens for the month (FIXED!)
+        tx.executeSql(`
+            SELECT 
+                (SELECT COUNT(*) FROM visits WHERE date_time LIKE ?) + 
+                (SELECT COUNT(*) FROM tokens WHERE token_date LIKE ?) as c
+        `, ['%' + monthYear, '%' + monthYear], function(tx, r) { 
+            document.getElementById('monthPatients').textContent = r.rows.item(0).c; 
+        }); 
         
-        // 5. FOLLOW-UP DUE - Uses BOTH visits AND tokens to find each patient's latest activity
+        // 5. FOLLOW-UP DUE
         tx.executeSql('SELECT * FROM patients', [], function(tx, r) { 
             const todayDate = new Date(); 
             todayDate.setHours(0, 0, 0, 0);
-            
-            // Map to store each unique patient's LATEST activity date
             const latestActivity = {}; 
             
-            // First, collect all patient IDs and their registration dates
             for (let i = 0; i < r.rows.length; i++) { 
                 const p = r.rows.item(i);
                 const regDate = parseDate(p.date_time); 
@@ -387,9 +388,7 @@ function loadDashboard() {
                 }
             } 
             
-            // Now, update with visit dates (if any)
             tx.executeSql('SELECT patient_id, date_time FROM visits', [], function(tx2, vRes) {
-                // Build patient_id to key map
                 const idToKey = {};
                 for (let i = 0; i < r.rows.length; i++) {
                     const p = r.rows.item(i);
@@ -408,7 +407,6 @@ function loadDashboard() {
                     }
                 }
                 
-                // Also update with token dates (if any)
                 tx.executeSql('SELECT patient_id, token_date FROM tokens', [], function(tx3, tRes) {
                     for (let k = 0; k < tRes.rows.length; k++) {
                         const t = tRes.rows.item(k);
@@ -420,7 +418,6 @@ function loadDashboard() {
                         }
                     }
                     
-                    // Now count patients whose latest activity was 7+ days ago
                     let rc = 0; 
                     Object.values(latestActivity).forEach(lastDate => { 
                         const nextVisit = new Date(lastDate.getFullYear(), lastDate.getMonth(), lastDate.getDate() + 7);
@@ -434,13 +431,15 @@ function loadDashboard() {
             });
         }); 
         
-        // 6. Average Per Day (based on visits this month)
-        tx.executeSql('SELECT COUNT(*) as c FROM visits WHERE date_time LIKE ?', 
-            ['%' + monthYear], 
-            function(tx, r) { 
-                const dp = now.getDate(); 
-                document.getElementById('avgPerDay').textContent = dp > 0 ? Math.round(r.rows.item(0).c / dp * 10) / 10 : 0; 
-            }); 
+        // 6. Average Per Day (based on visits + tokens this month)
+        tx.executeSql(`
+            SELECT 
+                (SELECT COUNT(*) FROM visits WHERE date_time LIKE ?) + 
+                (SELECT COUNT(*) FROM tokens WHERE token_date LIKE ?) as c
+        `, ['%' + monthYear, '%' + monthYear], function(tx, r) { 
+            const dp = now.getDate(); 
+            document.getElementById('avgPerDay').textContent = dp > 0 ? Math.round(r.rows.item(0).c / dp * 10) / 10 : 0; 
+        }); 
     }); 
 }
 // ==========================================
