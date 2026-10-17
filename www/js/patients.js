@@ -337,13 +337,16 @@ function closeDetail() { document.getElementById('detailOverlay').classList.remo
 function closeDetailIfOutside(e) { if (e.target === document.getElementById('detailOverlay')) closeDetail(); }
 
 // ==========================================
-// FIXED: Parse dates in JavaScript instead of SQL LIKE
+// AGGRESSIVE DEBUGGING FOR MONTH VISITS
 // ==========================================
 function loadDashboard() { 
+    console.log('🚀 loadDashboard() CALLED');
     const now = new Date();
     const today = getTodayDate();
-    const currentMonth = now.getMonth(); // 0-11
-    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-11 (October = 9)
+    const currentYear = now.getFullYear(); // 2026
+    
+    console.log('📅 Current Month (0-11):', currentMonth, '| Current Year:', currentYear);
     
     db.transaction(function(tx) { 
         // 1. Total Patients
@@ -365,31 +368,48 @@ function loadDashboard() {
                     });
             }); 
         
-        // 4. THIS MONTH VISITS - Parse in JavaScript
+        // 4. THIS MONTH VISITS - AGGRESSIVE DEBUG
+        console.log('🔍 Fetching ALL visits from database...');
         tx.executeSql('SELECT date_time FROM visits', [], function(tx, allVisits) {
+            console.log('📊 Total rows in visits table:', allVisits.rows.length);
+            
             let monthVisitCount = 0;
             
             for (let i = 0; i < allVisits.rows.length; i++) {
-                const dateStr = allVisits.rows.item(i).date_time;
+                const row = allVisits.rows.item(i);
+                const dateStr = row.date_time;
+                console.log(`  Row ${i}: date_time = "${dateStr}" (type: ${typeof dateStr})`);
                 
-                // Parse "16/10/2026 23:59:00" format
-                if (dateStr && dateStr.includes('/')) {
-                    const parts = dateStr.split(' ')[0].split('/'); // ["16", "10", "2026"]
+                if (dateStr && String(dateStr).includes('/')) {
+                    const parts = String(dateStr).split(' ')[0].split('/');
+                    console.log(`    -> Split parts:`, parts);
                     if (parts.length === 3) {
-                        const day = parseInt(parts[0]);
-                        const month = parseInt(parts[1]) - 1; // Convert to 0-11
+                        const month = parseInt(parts[1]) - 1;
                         const year = parseInt(parts[2]);
+                        console.log(`    -> Parsed: Month=${month}, Year=${year}`);
                         
-                        // Check if this visit is in the current month/year
                         if (month === currentMonth && year === currentYear) {
                             monthVisitCount++;
+                            console.log(`    -> ✅ MATCH! Count is now: ${monthVisitCount}`);
                         }
                     }
+                } else {
+                    console.log(`    -> ❌ Does not contain '/'`);
                 }
             }
             
-            console.log('✅ This Month Visits (parsed in JS):', monthVisitCount);
-            document.getElementById('monthPatients').textContent = monthVisitCount;
+            console.log('🎯 FINAL MONTH VISIT COUNT:', monthVisitCount);
+            
+            // Force update the DOM
+            const el = document.getElementById('monthPatients');
+            if (el) {
+                el.textContent = monthVisitCount;
+                console.log('✅ Updated DOM element "monthPatients" to:', monthVisitCount);
+            } else {
+                console.error('❌ Could not find element with id "monthPatients"');
+            }
+        }, function(err) {
+            console.error('❌ SQL Error fetching visits:', err);
         });
         
         // 5. FOLLOW-UP DUE
@@ -452,13 +472,13 @@ function loadDashboard() {
             });
         }); 
         
-        // 6. Average Per Day (based on visits this month)
+        // 6. Average Per Day
         tx.executeSql('SELECT date_time FROM visits', [], function(tx, allVisits) {
             let monthVisitCount = 0;
             for (let i = 0; i < allVisits.rows.length; i++) {
                 const dateStr = allVisits.rows.item(i).date_time;
-                if (dateStr && dateStr.includes('/')) {
-                    const parts = dateStr.split(' ')[0].split('/');
+                if (dateStr && String(dateStr).includes('/')) {
+                    const parts = String(dateStr).split(' ')[0].split('/');
                     if (parts.length === 3) {
                         const month = parseInt(parts[1]) - 1;
                         const year = parseInt(parts[2]);
